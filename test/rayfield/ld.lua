@@ -1,4 +1,4 @@
-{field = (function()
+(function()
 			local Release = "Build 1.17"
 			local RayfieldFolder = "Rayfield"
 			local ConfigurationFolder = RayfieldFolder.."/Configurations"
