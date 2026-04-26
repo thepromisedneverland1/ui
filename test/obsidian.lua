@@ -1,5 +1,5 @@
---[[
-fixed and better one   
+--[[       
+doesn't breaks anymore
 ]]--
 
 local cloneref = (cloneref or clonereference or function(instance: any)
@@ -8308,6 +8308,10 @@ function Library:CreateWindow(WindowInfo)
             function Groupbox:Resize()
                 GroupboxHolder.Size = UDim2.new(1, 0, 0, (GroupboxList.AbsoluteContentSize.Y / Library.DPIScale) + 49)
             end
+
+            Library:GiveSignal(GroupboxList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+                Groupbox:Resize()
+            end))
 
             setmetatable(Groupbox, BaseGroupbox)
 
