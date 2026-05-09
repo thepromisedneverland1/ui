@@ -1,7 +1,3 @@
---[[       
-doesn't breaks anymore
-]]--
-
 local cloneref = (cloneref or clonereference or function(instance: any)
     return instance
 end)
@@ -6003,6 +5999,42 @@ do
                 Library:UpdateDependencyBoxes()
                 Library:SafeCallback(Dropdown.Callback, Dropdown.Value)
                 Library:SafeCallback(Dropdown.Changed, Dropdown.Value)
+            end
+        end
+
+        if Info.Multi then
+            function Dropdown:AddValue(Value)
+                if Dropdown.Value[Value] then return end
+                print("added " .. tostring(Value))
+                Dropdown.Value[Value] = true
+
+                Dropdown:Display()
+                for _, Button in Buttons do
+                    Button:UpdateButton()
+                end
+
+                if not Dropdown.Disabled then
+                    Library:UpdateDependencyBoxes()
+                    Library:SafeCallback(Dropdown.Callback, Dropdown.Value)
+                    Library:SafeCallback(Dropdown.Changed, Dropdown.Value)
+                end
+            end
+
+            function Dropdown:RemoveValue(Value)
+                if not Dropdown.Value[Value] then return end
+                print("removed " .. tostring(Value))
+                Dropdown.Value[Value] = nil
+
+                Dropdown:Display()
+                for _, Button in Buttons do
+                    Button:UpdateButton()
+                end
+
+                if not Dropdown.Disabled then
+                    Library:UpdateDependencyBoxes()
+                    Library:SafeCallback(Dropdown.Callback, Dropdown.Value)
+                    Library:SafeCallback(Dropdown.Changed, Dropdown.Value)
+                end
             end
         end
 
