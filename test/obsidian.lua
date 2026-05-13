@@ -1,38 +1,6 @@
 local cloneref = (cloneref or clonereference or function(instance: any)
     return instance
 end)
-local clonefunction = (clonefunction or copyfunction or function(func) 
-    return func 
-end)
-
-local isfolder, isfile, listfiles = isfolder, isfile, listfiles
-
-if typeof(clonefunction) == "function" then
-    local isfolder_copy, isfile_copy, listfiles_copy = clonefunction(isfolder), clonefunction(isfile), clonefunction(listfiles)
-
-    local isfolder_success, isfolder_error = pcall(function()
-        return isfolder_copy("test" .. tostring(math.random(1000000, 9999999)))
-    end)
-
-    if isfolder_success == false or typeof(isfolder_error) ~= "boolean" then
-        isfolder = function(folder)
-            local success, data = pcall(isfolder_copy, folder)
-            return (if success then data else false)
-        end
-
-        isfile = function(file)
-            local success, data = pcall(isfile_copy, file)
-            return (if success then data else false)
-        end
-
-        listfiles = function(folder)
-            local success, data = pcall(listfiles_copy, folder)
-            return (if success then data else {})
-        end
-    end
-end
-
-local HttpService: HttpService = cloneref(game:GetService("HttpService"))
 local CoreGui: CoreGui = cloneref(game:GetService("CoreGui"))
 local Players: Players = cloneref(game:GetService("Players"))
 local RunService: RunService = cloneref(game:GetService("RunService"))
@@ -60,7 +28,7 @@ local Toggles = {}
 local Options = {}
 local Tooltips = {}
 
-local BaseURL = "https://raw.githubusercontent.com/deividcomsono/Obsidian/refs/heads/main/"
+local BaseURL = "https://raw.githubusercontent.com/BobGucci/RampageLibray/refs/heads/main/"
 local CustomImageManager = {}
 local CustomImageManagerAssets = {
     TransparencyTexture = {
@@ -75,22 +43,6 @@ local CustomImageManagerAssets = {
         RobloxId = 4155801252,
         Path = "Obsidian/assets/SaturationMap.png",
         URL = BaseURL .. "assets/SaturationMap.png",
-
-        Id = nil,
-    },
-
-    LoadingIcon = {
-        RobloxId = 97544096941083,
-        Path = "Obsidian/assets/LoadingIcon.png",
-        URL = BaseURL .. "assets/LoadingIcon.png",
-
-        Id = nil,
-    },
-
-    CheckIcon = {
-        RobloxId = 97682394690683,
-        Path = "Obsidian/assets/CheckIcon.png",
-        URL = BaseURL .. "assets/CheckIcon.png",
 
         Id = nil,
     },
@@ -214,11 +166,6 @@ local Library = {
     KeybindToggles = {},
 
     Notifications = {},
-    Dialogues = {},
-    ActiveLoading = nil,
-    ActiveDialog = nil,
-
-    Corners = {},
 
     ToggleKeybind = Enum.KeyCode.RightControl,
     TweenInfo = TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
@@ -247,7 +194,6 @@ local Library = {
     MinSize = Vector2.new(480, 360),
     DPIScale = 1,
     CornerRadius = 4,
-    CornerRadiusDropdown = false, -- Temporary
 
     IsLightTheme = false,
     Scheme = {
@@ -259,7 +205,6 @@ local Library = {
         Font = Font.fromEnum(Enum.Font.Code),
 
         RedColor = Color3.fromRGB(255, 50, 50),
-        DestructiveColor = Color3.fromRGB(220, 38, 38),
         DarkColor = Color3.new(0, 0, 0),
         WhiteColor = Color3.new(1, 1, 1),
     },
@@ -269,944 +214,6 @@ local Library = {
 
     ImageManager = CustomImageManager,
 }
-
-Library.SaveManager = (function()
-    local SaveManager = {} do
-        SaveManager.Folder = "ObsidianLibSettings"
-        SaveManager.SubFolder = ""
-        SaveManager.Ignore = {}
-        SaveManager.Library = Library
-        SaveManager.Parser = {
-            Toggle = {
-                Save = function(idx, object)
-                    return { type = "Toggle", idx = idx, value = object.Value }
-                end,
-                Load = function(idx, data)
-                    local object = SaveManager.Library.Toggles[idx]
-                    if object and object.Value ~= data.value then
-                        object:SetValue(data.value)
-                    end
-                end,
-            },
-            Slider = {
-                Save = function(idx, object)
-                    return { type = "Slider", idx = idx, value = tostring(object.Value) }
-                end,
-                Load = function(idx, data)
-                    local object = SaveManager.Library.Options[idx]
-                    if object and object.Value ~= data.value then
-                        object:SetValue(data.value)
-                    end
-                end,
-            },
-            Dropdown = {
-                Save = function(idx, object)
-                    return { type = "Dropdown", idx = idx, value = object.Value, multi = object.Multi }
-                end,
-                Load = function(idx, data)
-                    local object = SaveManager.Library.Options[idx]
-                    if object and object.Value ~= data.value then
-                        object:SetValue(data.value)
-                    end
-                end,
-            },
-            ColorPicker = {
-                Save = function(idx, object)
-                    return { type = "ColorPicker", idx = idx, value = object.Value:ToHex(), transparency = object.Transparency }
-                end,
-                Load = function(idx, data)
-                    if SaveManager.Library.Options[idx] then
-                        SaveManager.Library.Options[idx]:SetValueRGB(Color3.fromHex(data.value), data.transparency)
-                    end
-                end,
-            },
-            KeyPicker = {
-                Save = function(idx, object)
-                    return { type = "KeyPicker", idx = idx, mode = object.Mode, key = object.Value, modifiers = object.Modifiers }
-                end,
-                Load = function(idx, data)
-                    if SaveManager.Library.Options[idx] then
-                        SaveManager.Library.Options[idx]:SetValue({ data.key, data.mode, data.modifiers })
-                    end
-                end,
-            },
-            Input = {
-                Save = function(idx, object)
-                    return { type = "Input", idx = idx, text = object.Value }
-                end,
-                Load = function(idx, data)
-                    local object = SaveManager.Library.Options[idx]
-                    if object and object.Value ~= data.text and type(data.text) == "string" then
-                        SaveManager.Library.Options[idx]:SetValue(data.text)
-                    end
-                end,
-            },
-        }
-
-        function SaveManager:IgnoreThemeSettings()
-            self:SetIgnoreIndexes({
-                "BackgroundColor", "MainColor", "AccentColor", "OutlineColor", "FontColor", "FontFace", -- themes
-                "ThemeManager_ThemeList", "ThemeManager_CustomThemeList", "ThemeManager_CustomThemeName", -- themes
-            })
-        end
-
-        --// Folders \\--
-        function SaveManager:CheckSubFolder(createFolder)
-            if typeof(self.SubFolder) ~= "string" or self.SubFolder == "" then return false end
-
-            if createFolder == true then
-                if not isfolder(self.Folder .. "/settings/" .. self.SubFolder) then
-                    makefolder(self.Folder .. "/settings/" .. self.SubFolder)
-                end
-            end
-
-            return true
-        end
-
-        function SaveManager:GetPaths()
-            local paths = {}
-
-            local parts = self.Folder:split("/")
-            for idx = 1, #parts do
-                local path = table.concat(parts, "/", 1, idx)
-                if not table.find(paths, path) then paths[#paths + 1] = path end
-            end
-
-            paths[#paths + 1] = self.Folder .. "/themes"
-            paths[#paths + 1] = self.Folder .. "/settings"
-
-            if self:CheckSubFolder(false) then
-                local subFolder = self.Folder .. "/settings/" .. self.SubFolder
-                parts = subFolder:split("/")
-
-                for idx = 1, #parts do
-                    local path = table.concat(parts, "/", 1, idx)
-                    if not table.find(paths, path) then paths[#paths + 1] = path end
-                end
-            end
-
-            return paths
-        end
-
-        function SaveManager:BuildFolderTree()
-            local paths = self:GetPaths()
-
-            for i = 1, #paths do
-                local str = paths[i]
-                if isfolder(str) then continue end
-
-                makefolder(str)
-            end
-        end
-
-        function SaveManager:CheckFolderTree()
-            if isfolder(self.Folder) then return end
-            SaveManager:BuildFolderTree()
-
-            task.wait(0.1)
-        end
-
-        function SaveManager:SetIgnoreIndexes(list)
-            for _, key in pairs(list) do
-                self.Ignore[key] = true
-            end
-        end
-
-        function SaveManager:SetFolder(folder)
-            self.Folder = folder
-            self:BuildFolderTree()
-        end
-
-        function SaveManager:SetSubFolder(folder)
-            self.SubFolder = folder
-            self:BuildFolderTree()
-        end
-
-        --// Save, Load, Delete, Refresh \\--
-        function SaveManager:Save(name)
-            if (not name) then
-                return false, "no config file is selected"
-            end
-            SaveManager:CheckFolderTree()
-
-            local fullPath = self.Folder .. "/settings/" .. name .. ".json"
-            if SaveManager:CheckSubFolder(true) then
-                fullPath = self.Folder .. "/settings/" .. self.SubFolder .. "/" .. name .. ".json"
-            end
-
-            local data = {
-                objects = {}
-            }
-
-            for idx, toggle in pairs(self.Library.Toggles) do
-                if not toggle.Type then continue end
-                if not self.Parser[toggle.Type] then continue end
-                if self.Ignore[idx] then continue end
-
-                table.insert(data.objects, self.Parser[toggle.Type].Save(idx, toggle))
-            end
-
-            for idx, option in pairs(self.Library.Options) do
-                if not option.Type then continue end
-                if not self.Parser[option.Type] then continue end
-                if self.Ignore[idx] then continue end
-
-                table.insert(data.objects, self.Parser[option.Type].Save(idx, option))
-            end
-
-            local success, encoded = pcall(HttpService.JSONEncode, HttpService, data)
-            if not success then
-                return false, "failed to encode data"
-            end
-
-            writefile(fullPath, encoded)
-            return true
-        end
-
-        function SaveManager:Load(name)
-            if (not name) then
-                return false, "no config file is selected"
-            end
-            SaveManager:CheckFolderTree()
-
-            local file = self.Folder .. "/settings/" .. name .. ".json"
-            if SaveManager:CheckSubFolder(true) then
-                file = self.Folder .. "/settings/" .. self.SubFolder .. "/" .. name .. ".json"
-            end
-
-            if not isfile(file) then return false, "invalid file" end
-
-            local success, decoded = pcall(HttpService.JSONDecode, HttpService, readfile(file))
-            if not success then return false, "decode error" end
-
-            for _, option in pairs(decoded.objects) do
-                if not option.type then continue end
-                if not self.Parser[option.type] then continue end
-                if self.Ignore[option.idx] then continue end
-
-                task.spawn(self.Parser[option.type].Load, option.idx, option) -- task.spawn() so the config loading wont get stuck.
-            end
-
-            return true
-        end
-
-        function SaveManager:Delete(name)
-            if (not name) then
-                return false, "no config file is selected"
-            end
-
-            local file = self.Folder .. "/settings/" .. name .. ".json"
-            if SaveManager:CheckSubFolder(true) then
-                file = self.Folder .. "/settings/" .. self.SubFolder .. "/" .. name .. ".json"
-            end
-
-            if not isfile(file) then return false, "invalid file" end
-
-            local success = pcall(delfile, file)
-            if not success then return false, "delete file error" end
-
-            return true
-        end
-
-        function SaveManager:RefreshConfigList()
-            local success, data = pcall(function()
-                SaveManager:CheckFolderTree()
-
-                local list = {}
-                local out = {}
-
-                if SaveManager:CheckSubFolder(true) then
-                    list = listfiles(self.Folder .. "/settings/" .. self.SubFolder)
-                else
-                    list = listfiles(self.Folder .. "/settings")
-                end
-                if typeof(list) ~= "table" then list = {} end
-
-                for i = 1, #list do
-                    local file = list[i]
-                    if file:sub(-5) == ".json" then
-                        -- i hate this but it has to be done ...
-
-                        local pos = file:find(".json", 1, true)
-                        local start = pos
-
-                        local char = file:sub(pos, pos)
-                        while char ~= "/" and char ~= "\\" and char ~= "" do
-                            pos = pos - 1
-                            char = file:sub(pos, pos)
-                        end
-
-                        if char == "/" or char == "\\" then
-                            table.insert(out, file:sub(pos + 1, start - 1))
-                        end
-                    end
-                end
-
-                return out
-            end)
-
-            if (not success) then
-                if self.Library then
-                    self.Library:Notify("Failed to load config list: " .. tostring(data))
-                else
-                    warn("Failed to load config list: " .. tostring(data))
-                end
-
-                return {}
-            end
-
-            return data
-        end
-
-        --// Auto Load \\--
-        function SaveManager:GetAutoloadConfig()
-            SaveManager:CheckFolderTree()
-
-            local autoLoadPath = self.Folder .. "/settings/autoload.txt"
-            if SaveManager:CheckSubFolder(true) then
-                autoLoadPath = self.Folder .. "/settings/" .. self.SubFolder .. "/autoload.txt"
-            end
-
-            if isfile(autoLoadPath) then
-                local successRead, name = pcall(readfile, autoLoadPath)
-                if not successRead then
-                    return "none"
-                end
-
-                name = tostring(name)
-                return if name == "" then "none" else name
-            end
-
-            return "none"
-        end
-
-        function SaveManager:LoadAutoloadConfig()
-            SaveManager:CheckFolderTree()
-
-            local autoLoadPath = self.Folder .. "/settings/autoload.txt"
-            if SaveManager:CheckSubFolder(true) then
-                autoLoadPath = self.Folder .. "/settings/" .. self.SubFolder .. "/autoload.txt"
-            end
-
-            if isfile(autoLoadPath) then
-                local successRead, name = pcall(readfile, autoLoadPath)
-                if not successRead then
-                    self.Library:Notify("Failed to load autoload config: write file error")
-                    return
-                end
-
-                local success, err = self:Load(name)
-                if not success then
-                    self.Library:Notify("Failed to load autoload config: " .. err)
-                    return
-                end
-
-                self.Library:Notify(string.format("Auto loaded config %q", name))
-            end
-        end
-
-        function SaveManager:SaveAutoloadConfig(name)
-            SaveManager:CheckFolderTree()
-
-            local autoLoadPath = self.Folder .. "/settings/autoload.txt"
-            if SaveManager:CheckSubFolder(true) then
-                autoLoadPath = self.Folder .. "/settings/" .. self.SubFolder .. "/autoload.txt"
-            end
-
-            local success = pcall(writefile, autoLoadPath, name)
-            if not success then return false, "write file error" end
-
-            return true, ""
-        end
-
-        function SaveManager:DeleteAutoLoadConfig()
-            SaveManager:CheckFolderTree()
-
-            local autoLoadPath = self.Folder .. "/settings/autoload.txt"
-            if SaveManager:CheckSubFolder(true) then
-                autoLoadPath = self.Folder .. "/settings/" .. self.SubFolder .. "/autoload.txt"
-            end
-
-            local success = pcall(delfile, autoLoadPath)
-            if not success then return false, "delete file error" end
-
-            return true, ""
-        end
-
-        --// GUI \\--
-        function SaveManager:BuildConfigSection(tab)
-            assert(self.Library, "Must set SaveManager.Library")
-
-            local section = tab:AddRightGroupbox("Configuration", "folder-cog")
-
-            section:AddInput("SaveManager_ConfigName",    { Text = "Config name" })
-            section:AddButton("Create config", function()
-                local name = self.Library.Options.SaveManager_ConfigName.Value
-
-                if name:gsub(" ", "") == "" then
-                    self.Library:Notify("Invalid config name (empty)", 2)
-                    return
-                end
-
-                local success, err = self:Save(name)
-                if not success then
-                    self.Library:Notify("Failed to create config: " .. err)
-                    return
-                end
-
-                self.Library:Notify(string.format("Created config %q", name))
-                self.Library.Options.SaveManager_ConfigList:SetValues(self:RefreshConfigList())
-                self.Library.Options.SaveManager_ConfigList:SetValue(nil)
-            end)
-
-            section:AddDivider()
-
-            section:AddDropdown("SaveManager_ConfigList", { Text = "Config list", Values = self:RefreshConfigList(), AllowNull = true })
-            section:AddButton("Load config", function()
-                local name = self.Library.Options.SaveManager_ConfigList.Value
-
-                local success, err = self:Load(name)
-                if not success then
-                    self.Library:Notify("Failed to load config: " .. err)
-                    return
-                end
-
-                self.Library:Notify(string.format("Loaded config %q", name))
-            end)
-            section:AddButton("Overwrite config", function()
-                local name = self.Library.Options.SaveManager_ConfigList.Value
-
-                local success, err = self:Save(name)
-                if not success then
-                    self.Library:Notify("Failed to overwrite config: " .. err)
-                    return
-                end
-
-                self.Library:Notify(string.format("Overwrote config %q", name))
-            end)
-
-            section:AddButton("Delete config", function()
-                local name = self.Library.Options.SaveManager_ConfigList.Value
-
-                local success, err = self:Delete(name)
-                if not success then
-                    self.Library:Notify("Failed to delete config: " .. err)
-                    return
-                end
-
-                self.Library:Notify(string.format("Deleted config %q", name))
-                self.Library.Options.SaveManager_ConfigList:SetValues(self:RefreshConfigList())
-                self.Library.Options.SaveManager_ConfigList:SetValue(nil)
-            end)
-
-            section:AddButton("Refresh list", function()
-                self.Library.Options.SaveManager_ConfigList:SetValues(self:RefreshConfigList())
-                self.Library.Options.SaveManager_ConfigList:SetValue(nil)
-            end)
-
-            section:AddButton("Set as autoload", function()
-                local name = self.Library.Options.SaveManager_ConfigList.Value
-
-                local success, err = self:SaveAutoloadConfig(name)
-                if not success then
-                    self.Library:Notify("Failed to set autoload config: " .. err)
-                    return
-                end
-
-                self.Library:Notify(string.format("Set %q to auto load", name))
-                self.AutoloadConfigLabel:SetText("Current autoload config: " .. name)
-            end)
-            section:AddButton("Reset autoload", function()
-                local success, err = self:DeleteAutoLoadConfig()
-                if not success then
-                    self.Library:Notify("Failed to set autoload config: " .. err)
-                    return
-                end
-
-                self.Library:Notify("Set autoload to none")
-                self.AutoloadConfigLabel:SetText("Current autoload config: none")
-            end)
-
-            self.AutoloadConfigLabel = section:AddLabel("Current autoload config: " .. self:GetAutoloadConfig(), true)
-
-            -- self:LoadAutoloadConfig()
-            self:SetIgnoreIndexes({ "SaveManager_ConfigList", "SaveManager_ConfigName" })
-        end
-
-        SaveManager:BuildFolderTree()
-    end
-
-    return SaveManager
-end)()
-Library.ThemeManager = (function()
-    local ThemeManager = {}
-    do
-        local ThemeFields = { "FontColor", "MainColor", "AccentColor", "BackgroundColor", "OutlineColor" }
-        ThemeManager.Folder = "ObsidianLibSettings"
-        -- if not isfolder(ThemeManager.Folder) then makefolder(ThemeManager.Folder) end
-
-        ThemeManager.Library = Library
-        ThemeManager.AppliedToTab = false
-        ThemeManager.BuiltInThemes = {
-            ["Default"] = {
-                1,
-                { FontColor = "ffffff", MainColor = "191919", AccentColor = "7d55ff", BackgroundColor = "0f0f0f", OutlineColor = "282828" },
-            },
-            ["BBot"] = {
-                2,
-                { FontColor = "ffffff", MainColor = "1e1e1e", AccentColor = "7e48a3", BackgroundColor = "232323", OutlineColor = "141414" },
-            },
-            ["Fatality"] = {
-                3,
-                { FontColor = "ffffff", MainColor = "1e1842", AccentColor = "c50754", BackgroundColor = "191335", OutlineColor = "3c355d" },
-            },
-            ["Jester"] = {
-                4,
-                { FontColor = "ffffff", MainColor = "242424", AccentColor = "db4467", BackgroundColor = "1c1c1c", OutlineColor = "373737" },
-            },
-            ["Mint"] = {
-                5,
-                { FontColor = "ffffff", MainColor = "242424", AccentColor = "3db488", BackgroundColor = "1c1c1c", OutlineColor = "373737" },
-            },
-            ["Tokyo Night"] = {
-                6,
-                { FontColor = "ffffff", MainColor = "191925", AccentColor = "6759b3", BackgroundColor = "16161f", OutlineColor = "323232" },
-            },
-            ["Ubuntu"] = {
-                7,
-                { FontColor = "ffffff", MainColor = "3e3e3e", AccentColor = "e2581e", BackgroundColor = "323232", OutlineColor = "191919" },
-            },
-            ["Quartz"] = {
-                8,
-                { FontColor = "ffffff", MainColor = "232330", AccentColor = "426e87", BackgroundColor = "1d1b26", OutlineColor = "27232f" },
-            },
-            ["Nord"] = {
-                9,
-                { FontColor = "eceff4", MainColor = "3b4252", AccentColor = "88c0d0", BackgroundColor = "2e3440", OutlineColor = "4c566a" },
-            },
-            ["Dracula"] = {
-                10,
-                { FontColor = "f8f8f2", MainColor = "44475a", AccentColor = "ff79c6", BackgroundColor = "282a36", OutlineColor = "6272a4" },
-            },
-            ["Monokai"] = {
-                11,
-                { FontColor = "f8f8f2", MainColor = "272822", AccentColor = "f92672", BackgroundColor = "1e1f1c", OutlineColor = "49483e" },
-            },
-            ["Gruvbox"] = {
-                12,
-                { FontColor = "ebdbb2", MainColor = "3c3836", AccentColor = "fb4934", BackgroundColor = "282828", OutlineColor = "504945" },
-            },
-            ["Solarized"] = {
-                13,
-                { FontColor = "839496", MainColor = "073642", AccentColor = "cb4b16", BackgroundColor = "002b36", OutlineColor = "586e75" },
-            },
-            ["Catppuccin"] = {
-                14,
-                { FontColor = "d9e0ee", MainColor = "302d41", AccentColor = "f5c2e7", BackgroundColor = "1e1e2e", OutlineColor = "575268" },
-            },
-            ["One Dark"] = {
-                15,
-                { FontColor = "abb2bf", MainColor = "282c34", AccentColor = "c678dd", BackgroundColor = "21252b", OutlineColor = "5c6370" },
-            },
-            ["Cyberpunk"] = {
-                16,
-                { FontColor = "f9f9f9", MainColor = "262335", AccentColor = "00ff9f", BackgroundColor = "1a1a2e", OutlineColor = "413c5e" },
-            },
-            ["Oceanic Next"] = {
-                17,
-                { FontColor = "d8dee9", MainColor = "1b2b34", AccentColor = "6699cc", BackgroundColor = "16232a", OutlineColor = "343d46" },
-            },
-            ["Material"] = {
-                18,
-                { FontColor = "eeffff", MainColor = "212121", AccentColor = "82aaff", BackgroundColor = "151515", OutlineColor = "424242" },
-            },
-        }
-
-        --// Folders \\--
-        function ThemeManager:GetPaths()
-            local paths = {}
-
-            local parts = self.Folder:split("/")
-            for idx = 1, #parts do
-                paths[#paths + 1] = table.concat(parts, "/", 1, idx)
-            end
-
-            paths[#paths + 1] = self.Folder .. "/themes"
-
-            return paths
-        end
-
-        function ThemeManager:BuildFolderTree()
-            local paths = self:GetPaths()
-
-            for i = 1, #paths do
-                local str = paths[i]
-                if isfolder(str) then
-                    continue
-                end
-                makefolder(str)
-            end
-        end
-
-        function ThemeManager:CheckFolderTree()
-            if isfolder(self.Folder) then
-                return
-            end
-            self:BuildFolderTree()
-
-            task.wait(0.1)
-        end
-
-        function ThemeManager:SetFolder(folder)
-            self.Folder = folder
-            self:BuildFolderTree()
-        end
-
-        --// Apply, Update theme \\--
-        function ThemeManager:ApplyTheme(theme)
-            local customThemeData = self:GetCustomTheme(theme)
-            local data = customThemeData or self.BuiltInThemes[theme]
-
-            if not data then
-                return
-            end
-
-            local scheme = data[2]
-            for idx, val in pairs(customThemeData or scheme) do
-                if idx == "VideoLink" then
-                    continue
-                elseif idx == "FontFace" then
-                    self.Library:SetFont(Enum.Font[val])
-
-                    if self.Library.Options[idx] then
-                        self.Library.Options[idx]:SetValue(val)
-                    end
-                else
-                    self.Library.Scheme[idx] = Color3.fromHex(val)
-
-                    if self.Library.Options[idx] then
-                        self.Library.Options[idx]:SetValueRGB(Color3.fromHex(val))
-                    end
-                end
-            end
-
-            self:ThemeUpdate()
-        end
-
-        function ThemeManager:ThemeUpdate()
-            for i, field in ThemeFields do
-                if self.Library.Options and self.Library.Options[field] then
-                    self.Library.Scheme[field] = self.Library.Options[field].Value
-                end
-            end
-
-            self.Library:UpdateColorsUsingRegistry()
-        end
-
-        --// Get, Load, Save, Delete, Refresh \\--
-        function ThemeManager:GetCustomTheme(file)
-            local path = self.Folder .. "/themes/" .. file .. ".json"
-            if not isfile(path) then
-                return nil
-            end
-
-            local data = readfile(path)
-            local success, decoded = pcall(HttpService.JSONDecode, HttpService, data)
-
-            if not success then
-                return nil
-            end
-
-            return decoded
-        end
-
-        function ThemeManager:LoadDefault()
-            local theme = "Default"
-            local content = isfile(self.Folder .. "/themes/default.txt") and readfile(self.Folder .. "/themes/default.txt")
-
-            local isDefault = true
-            if content then
-                if self.BuiltInThemes[content] then
-                    theme = content
-                elseif self:GetCustomTheme(content) then
-                    theme = content
-                    isDefault = false
-                end
-            elseif self.BuiltInThemes[self.DefaultTheme] then
-                theme = self.DefaultTheme
-            end
-
-            if isDefault then
-                self.Library.Options.ThemeManager_ThemeList:SetValue(theme)
-            else
-                self:ApplyTheme(theme)
-            end
-        end
-
-        function ThemeManager:SaveDefault(theme)
-            writefile(self.Folder .. "/themes/default.txt", theme)
-        end
-
-        function ThemeManager:SetDefaultTheme(theme)
-            assert(self.Library, "Must set ThemeManager.Library first!")
-            assert(not self.AppliedToTab, "Cannot set default theme after applying ThemeManager to a tab!")
-
-            local FinalTheme = {}
-            local LibraryScheme = {}
-            for _, field in ThemeFields do
-                if typeof(theme[field]) == "Color3" then
-                    FinalTheme[field] = "#" .. theme[field]:ToHex()
-                    LibraryScheme[field] = theme[field]
-
-                elseif typeof(theme[field]) == "string" then
-                    FinalTheme[field] = if theme[field]:sub(1, 1) == "#" then theme[field] else ("#" .. theme[field])
-                    LibraryScheme[field] = Color3.fromHex(theme[field])
-
-                else
-                    FinalTheme[field] = ThemeManager.BuiltInThemes["Default"][2][field]
-                    LibraryScheme[field] = Color3.fromHex(ThemeManager.BuiltInThemes["Default"][2][field])
-                end
-            end
-
-            if typeof(theme["FontFace"]) == "EnumItem" then
-                FinalTheme["FontFace"] = theme["FontFace"].Name
-                LibraryScheme["Font"] = Font.fromEnum(theme["FontFace"])
-
-            elseif typeof(theme["FontFace"]) == "string" then
-                FinalTheme["FontFace"] = theme["FontFace"]
-                LibraryScheme["Font"] = Font.fromEnum(Enum.Font[theme["FontFace"]])
-
-            else
-                FinalTheme["FontFace"] = "Code"
-                LibraryScheme["Font"] = Font.fromEnum(Enum.Font.Code)
-            end
-
-            for _, field in { "RedColor", "DarkColor", "WhiteColor" } do
-                LibraryScheme[field] = self.Library.Scheme[field]
-            end
-
-            self.Library.Scheme = LibraryScheme
-            self.BuiltInThemes["Default"] = { 1, FinalTheme }
-
-            self.Library:UpdateColorsUsingRegistry()
-        end
-
-        function ThemeManager:SaveCustomTheme(file)
-            if file:gsub(" ", "") == "" then
-                self.Library:Notify("Invalid file name for theme (empty)", 3)
-                return
-            end
-
-            local theme = {}
-            for _, field in ThemeFields do
-                theme[field] = self.Library.Options[field].Value:ToHex()
-            end
-            theme["FontFace"] = self.Library.Options["FontFace"].Value
-
-            writefile(self.Folder .. "/themes/" .. file .. ".json", HttpService:JSONEncode(theme))
-        end
-
-        function ThemeManager:Delete(name)
-            if not name then
-                return false, "no config file is selected"
-            end
-
-            local file = self.Folder .. "/themes/" .. name .. ".json"
-            if not isfile(file) then
-                return false, "invalid file"
-            end
-
-            local success = pcall(delfile, file)
-            if not success then
-                return false, "delete file error"
-            end
-
-            return true
-        end
-
-        function ThemeManager:ReloadCustomThemes()
-            local list = listfiles(self.Folder .. "/themes")
-
-            local out = {}
-            for i = 1, #list do
-                local file = list[i]
-                if file:sub(-5) == ".json" then
-                    -- i hate this but it has to be done ...
-
-                    local pos = file:find(".json", 1, true)
-                    local start = pos
-
-                    local char = file:sub(pos, pos)
-                    while char ~= "/" and char ~= "\\" and char ~= "" do
-                        pos = pos - 1
-                        char = file:sub(pos, pos)
-                    end
-
-                    if char == "/" or char == "\\" then
-                        table.insert(out, file:sub(pos + 1, start - 1))
-                    end
-                end
-            end
-
-            return out
-        end
-
-        --// GUI \\--
-        function ThemeManager:CreateThemeManager(groupbox)
-            groupbox
-                :AddLabel("Background color")
-                :AddColorPicker("BackgroundColor", { Default = self.Library.Scheme.BackgroundColor })
-            groupbox:AddLabel("Main color"):AddColorPicker("MainColor", { Default = self.Library.Scheme.MainColor })
-            groupbox:AddLabel("Accent color"):AddColorPicker("AccentColor", { Default = self.Library.Scheme.AccentColor })
-            groupbox
-                :AddLabel("Outline color")
-                :AddColorPicker("OutlineColor", { Default = self.Library.Scheme.OutlineColor })
-            groupbox:AddLabel("Font color"):AddColorPicker("FontColor", { Default = self.Library.Scheme.FontColor })
-            groupbox:AddDropdown("FontFace", {
-                Text = "Font Face",
-                Default = "Code",
-                Values = { "BuilderSans", "Code", "Fantasy", "Gotham", "Jura", "Roboto", "RobotoMono", "SourceSans" },
-            })
-
-            local ThemesArray = {}
-            for Name, Theme in pairs(self.BuiltInThemes) do
-                table.insert(ThemesArray, Name)
-            end
-
-            table.sort(ThemesArray, function(a, b)
-                return self.BuiltInThemes[a][1] < self.BuiltInThemes[b][1]
-            end)
-
-            groupbox:AddDivider()
-
-            groupbox:AddDropdown("ThemeManager_ThemeList", { Text = "Theme list", Values = ThemesArray, Default = 1 })
-            groupbox:AddButton("Set as default", function()
-                self:SaveDefault(self.Library.Options.ThemeManager_ThemeList.Value)
-                self.Library:Notify(
-                    string.format("Set default theme to %q", self.Library.Options.ThemeManager_ThemeList.Value)
-                )
-            end)
-
-            self.Library.Options.ThemeManager_ThemeList:OnChanged(function()
-                self:ApplyTheme(self.Library.Options.ThemeManager_ThemeList.Value)
-            end)
-
-            groupbox:AddDivider()
-
-            groupbox:AddInput("ThemeManager_CustomThemeName", { Text = "Custom theme name" })
-            groupbox:AddButton("Create theme", function()
-                local name = self.Library.Options.ThemeManager_CustomThemeName.Value
-
-                if name:gsub(" ", "") == "" then
-                    self.Library:Notify("Invalid theme name (empty)", 2)
-                    return
-                end
-
-                self:SaveCustomTheme(name)
-
-                self.Library:Notify(string.format("Created theme %q", name))
-                self.Library.Options.ThemeManager_CustomThemeList:SetValues(self:ReloadCustomThemes())
-                self.Library.Options.ThemeManager_CustomThemeList:SetValue(nil)
-            end)
-
-            groupbox:AddDivider()
-
-            groupbox:AddDropdown(
-                "ThemeManager_CustomThemeList",
-                { Text = "Custom themes", Values = self:ReloadCustomThemes(), AllowNull = true, Default = 1 }
-            )
-            groupbox:AddButton("Load theme", function()
-                local name = self.Library.Options.ThemeManager_CustomThemeList.Value
-
-                self:ApplyTheme(name)
-                self.Library:Notify(string.format("Loaded theme %q", name))
-            end)
-            groupbox:AddButton("Overwrite theme", function()
-                local name = self.Library.Options.ThemeManager_CustomThemeList.Value
-
-                self:SaveCustomTheme(name)
-                self.Library:Notify(string.format("Overwrote config %q", name))
-            end)
-            groupbox:AddButton("Delete theme", function()
-                local name = self.Library.Options.ThemeManager_CustomThemeList.Value
-
-                local success, err = self:Delete(name)
-                if not success then
-                    self.Library:Notify("Failed to delete theme: " .. err)
-                    return
-                end
-
-                self.Library:Notify(string.format("Deleted theme %q", name))
-                self.Library.Options.ThemeManager_CustomThemeList:SetValues(self:ReloadCustomThemes())
-                self.Library.Options.ThemeManager_CustomThemeList:SetValue(nil)
-            end)
-            groupbox:AddButton("Refresh list", function()
-                self.Library.Options.ThemeManager_CustomThemeList:SetValues(self:ReloadCustomThemes())
-                self.Library.Options.ThemeManager_CustomThemeList:SetValue(nil)
-            end)
-            groupbox:AddButton("Set as default", function()
-                if
-                    self.Library.Options.ThemeManager_CustomThemeList.Value ~= nil
-                    and self.Library.Options.ThemeManager_CustomThemeList.Value ~= ""
-                then
-                    self:SaveDefault(self.Library.Options.ThemeManager_CustomThemeList.Value)
-                    self.Library:Notify(
-                        string.format("Set default theme to %q", self.Library.Options.ThemeManager_CustomThemeList.Value)
-                    )
-                end
-            end)
-            groupbox:AddButton("Reset default", function()
-                local success = pcall(delfile, self.Folder .. "/themes/default.txt")
-                if not success then
-                    self.Library:Notify("Failed to reset default: delete file error")
-                    return
-                end
-
-                self.Library:Notify("Set default theme to nothing")
-                self.Library.Options.ThemeManager_CustomThemeList:SetValues(self:ReloadCustomThemes())
-                self.Library.Options.ThemeManager_CustomThemeList:SetValue(nil)
-            end)
-
-            self:LoadDefault()
-            self.AppliedToTab = true
-
-            local function UpdateTheme()
-                self:ThemeUpdate()
-            end
-
-            self.Library.Options.BackgroundColor:OnChanged(UpdateTheme)
-            self.Library.Options.MainColor:OnChanged(UpdateTheme)
-            self.Library.Options.AccentColor:OnChanged(UpdateTheme)
-            self.Library.Options.OutlineColor:OnChanged(UpdateTheme)
-            self.Library.Options.FontColor:OnChanged(UpdateTheme)
-            self.Library.Options.FontFace:OnChanged(function(Value)
-                self.Library:SetFont(Enum.Font[Value])
-                self.Library:UpdateColorsUsingRegistry()
-            end)
-        end
-
-        function ThemeManager:CreateGroupBox(tab)
-            assert(self.Library, "Must set ThemeManager.Library first!")
-            return tab:AddLeftGroupbox("Themes", "paintbrush")
-        end
-
-        function ThemeManager:ApplyToTab(tab)
-            assert(self.Library, "Must set ThemeManager.Library first!")
-            local groupbox = self:CreateGroupBox(tab)
-            self:CreateThemeManager(groupbox)
-        end
-
-        function ThemeManager:ApplyToGroupbox(groupbox)
-            assert(self.Library, "Must set ThemeManager.Library first!")
-            self:CreateThemeManager(groupbox)
-        end
-
-        ThemeManager:BuildFolderTree()
-    end
-
-    getgenv().ObsidianThemeManager = ThemeManager
-    return ThemeManager
-end)()
 
 if RunService:IsStudio() then
     if UserInputService.TouchEnabled and not UserInputService.MouseEnabled then
@@ -1287,10 +294,7 @@ local Templates = {
         ShowCustomCursor = true,
         Font = Enum.Font.Code,
         ToggleKeybind = Enum.KeyCode.RightControl,
-        
-        ShowMobileButtons = true,
         MobileButtonsSide = "Left",
-
         UnlockMouseWhileOpen = true,
 
         EnableSidebarResize = false,
@@ -1306,34 +310,6 @@ local Templates = {
 
         --// Dragging \\--
         CompactWidthActivation = 128,
-    },
-    Dialog = {
-        Title = "Dialog",
-        Description = "Description",
-        AutoDismiss = true,
-        OutsideClickDismiss = true,
-        FooterButtons = {}
-    },
-    Loading = {
-        Title = "mspaint",
-        Icon = 95816097006870,
-        IconSize = UDim2.fromOffset(30, 30),
-
-        LoadingIcon = CustomImageManager.GetAsset("LoadingIcon"),
-        LoadingIconColor = nil,
-        LoadingIconTweenTime = 1,
-
-        CurrentStep = 0,
-        TotalSteps = 10,
-
-        ShowSidebar = false,
-        AutoResizeHeight = false,
-
-        WindowWidth = 450,
-        WindowHeight = 275,
-
-        ContentWidth = 450,
-        SidebarWidth = 250,
     },
     Toggle = {
         Text = "Toggle",
@@ -1352,14 +328,12 @@ local Templates = {
         Finished = false,
         Numeric = false,
         ClearTextOnFocus = true,
-        ClearTextOnBlur = false,
         Placeholder = "",
         AllowEmpty = true,
         EmptyReset = "---",
 
         Callback = function() end,
         Changed = function() end,
-        VerifyValue = nil,
 
         Disabled = false,
         Visible = true,
@@ -1429,15 +403,8 @@ local Templates = {
     --// Addons \\-
     KeyPicker = {
         Text = "KeyPicker",
-
         Default = "None",
         DefaultModifiers = {},
-
-        Blacklisted = {},
-        BlacklistedModifiers = {},
-        Whitelisted = {},
-        WhitelistedModifiers = {},
-
         Mode = "Toggle",
         Modes = { "Always", "Toggle", "Hold" },
         SyncToggleState = false,
@@ -2001,7 +968,8 @@ function Library:GiveSignal(Connection: RBXScriptConnection | RBXScriptSignal)
 end
 
 function IsValidCustomIcon(Icon: string)
-    return typeof(Icon) == "string" and (Icon:match("rbxasset") or Icon:match("roblox%.com/asset/%?id=") or Icon:match("rbxthumb://type="))
+    return typeof(Icon) == "string"
+        and (Icon:match("rbxasset") or Icon:match("roblox%.com/asset/%?id=") or Icon:match("rbxthumb://type="))
 end
 
 type Icon = {
@@ -2019,7 +987,7 @@ type IconModule = {
 
 local FetchIcons, Icons = pcall(function()
     return (loadstring(
-        game:HttpGet("https://raw.githubusercontent.com/deividcomsono/lucide-roblox-direct/refs/heads/main/source.lua")
+        game:HttpGet("https://raw.githubusercontent.com/BobGucci/lucide-roblox-direct/refs/heads/main/source.lua")
     ) :: () -> IconModule)()
 end)
 
@@ -2035,17 +1003,10 @@ function Library:GetIcon(IconName: string)
     return Icon
 end
 
-function Library:GetCustomIcon(IconName: string): any
-    if not IconName then
-        return nil
-    end
-
-    if tonumber(IconName) then
-        IconName = string.format("rbxassetid://%s", tostring(IconName))
-    end
-
-    local CustomIcon = IsValidCustomIcon(IconName)
-    if CustomIcon then
+function Library:GetCustomIcon(IconName: string)
+    if not IsValidCustomIcon(IconName) then
+        return Library:GetIcon(IconName)
+    else
         return {
             Url = IconName,
             ImageRectOffset = Vector2.zero,
@@ -2053,13 +1014,6 @@ function Library:GetCustomIcon(IconName: string): any
             Custom = true,
         }
     end
-
-    local LucideIcon = Library:GetIcon(IconName)
-    if LucideIcon then
-        return LucideIcon
-    end
-
-    return nil
 end
 
 function Library:Validate(Table: { [string]: any }, Template: { [string]: any }): { [string]: any }
@@ -2087,14 +1041,15 @@ local function FillInstance(Table: { [string]: any }, Instance: GuiObject)
     local ThemeProperties = Library.Registry[Instance] or {}
 
     for key, value in Table do
-        if key ~= "Text" then
+        if ThemeProperties[key] then
+            ThemeProperties[key] = nil
+        
+        elseif key ~= "Text" then
             local SchemeValue = GetSchemeValue(value)
 
             if SchemeValue or typeof(value) == "function" then
                 ThemeProperties[key] = value
                 value = SchemeValue or value()
-            else
-                ThemeProperties[key] = nil
             end
         end
 
@@ -2156,13 +1111,12 @@ local function ParentUI(UI: Instance, SkipHiddenUI: boolean?)
 end
 
 local ScreenGui = New("ScreenGui", {
-    Name = "Obsidian",
-    DisplayOrder = 998,
+    Name = "BobGucci",
+    DisplayOrder = 999,
     ResetOnSpawn = false,
 })
 ParentUI(ScreenGui)
 Library.ScreenGui = ScreenGui
-
 ScreenGui.DescendantRemoving:Connect(function(Instance)
     Library:RemoveFromRegistry(Instance)
 end)
@@ -2185,7 +1139,7 @@ do
         BackgroundColor3 = "WhiteColor",
         Size = UDim2.fromOffset(9, 1),
         Visible = false,
-        ZIndex = 11000,
+        ZIndex = 999,
         Parent = ScreenGui,
     })
     New("Frame", {
@@ -2193,7 +1147,7 @@ do
         BackgroundColor3 = "DarkColor",
         Position = UDim2.fromScale(0.5, 0.5),
         Size = UDim2.new(1, 2, 1, 2),
-        ZIndex = 10999,
+        ZIndex = 998,
         Parent = Cursor,
     })
 
@@ -2202,7 +1156,6 @@ do
         BackgroundColor3 = "WhiteColor",
         Position = UDim2.fromScale(0.5, 0.5),
         Size = UDim2.fromOffset(1, 9),
-        ZIndex = 11000,
         Parent = Cursor,
     })
     New("Frame", {
@@ -2210,7 +1163,7 @@ do
         BackgroundColor3 = "DarkColor",
         Position = UDim2.fromScale(0.5, 0.5),
         Size = UDim2.new(1, 2, 1, 2),
-        ZIndex = 10999,
+        ZIndex = 998,
         Parent = CursorV,
     })
 
@@ -2219,7 +1172,7 @@ do
         BackgroundTransparency = 1,
         Position = UDim2.fromScale(0.5, 0.5),
         Size = UDim2.fromOffset(20, 20),
-        ZIndex = 11000,
+        ZIndex = 1000,
         Visible = false,
         Parent = Cursor
     })
@@ -2501,7 +1454,7 @@ end
 
 --// Deprecated \\--
 function Library:MakeOutline(Frame: GuiObject, Corner: number?, ZIndex: number?)
-    warn("Obsidian:MakeOutline is deprecated, please use Obsidian:AddOutline instead.")
+    warn("Rampage:MakeOutline is deprecated, please use Obsidian:AddOutline instead.")
     local Holder = New("Frame", {
         BackgroundColor3 = "DarkColor",
         Position = UDim2.fromOffset(-2, -2),
@@ -2545,13 +1498,10 @@ function Library:AddDraggableLabel(Text: string)
         ZIndex = 10,
         Parent = ScreenGui,
     })
-    table.insert(
-        Library.Corners, 
-        New("UICorner", {
-            CornerRadius = UDim.new(0, Library.CornerRadius),
-            Parent = Label,
-        })
-    )
+    New("UICorner", {
+        CornerRadius = UDim.new(0, Library.CornerRadius),
+        Parent = Label,
+    })
     New("UIPadding", {
         PaddingBottom = UDim.new(0, 6),
         PaddingLeft = UDim.new(0, 12),
@@ -2592,13 +1542,10 @@ function Library:AddDraggableButton(Text: string, Func, ExcludeScaling: boolean?
         ZIndex = 10,
         Parent = ScreenGui,
     })
-    table.insert(
-        Library.Corners, 
-        New("UICorner", {
-            CornerRadius = UDim.new(0, Library.CornerRadius),
-            Parent = Button,
-        })
-    )
+    New("UICorner", {
+        CornerRadius = UDim.new(0, Library.CornerRadius),
+        Parent = Button,
+    })
     if not ExcludeScaling then
         table.insert(
             Library.Scales,
@@ -2636,13 +1583,10 @@ function Library:AddDraggableMenu(Name: string)
         ZIndex = 10,
         Parent = ScreenGui,
     })
-    table.insert(
-        Library.Corners,
-        New("UICorner", {
-            CornerRadius = UDim.new(0, Library.CornerRadius),
-            Parent = Holder,
-        })
-    )
+    New("UICorner", {
+        CornerRadius = UDim.new(0, Library.CornerRadius),
+        Parent = Holder,
+    })
     table.insert(
         Library.Scales,
         New("UIScale", {
@@ -2715,20 +1659,16 @@ function Library:AddContextMenu(
     Size: UDim2 | () -> (),
     Offset: { [number]: number } | () -> {},
     List: number?,
-    ActiveCallback: (Active: boolean) -> ()?,
-    IgnoreCornerRadius: boolean?
+    ActiveCallback: (Active: boolean) -> ()?
 )
     local Menu
-    local ParentGui = Holder:FindFirstAncestorOfClass("ScreenGui")
-    if ParentGui ~= ScreenGui and (Library.ActiveLoading and ParentGui ~= Library.ActiveLoading.ScreenGui) then
-        ParentGui = ScreenGui
-    end
-
     if List then
         Menu = New("ScrollingFrame", {
             AutomaticCanvasSize = List == 2 and Enum.AutomaticSize.Y or Enum.AutomaticSize.None,
             AutomaticSize = List == 1 and Enum.AutomaticSize.Y or Enum.AutomaticSize.None,
             BackgroundColor3 = "BackgroundColor",
+            BorderColor3 = "OutlineColor",
+            BorderSizePixel = 1,
             BottomImage = "rbxasset://textures/ui/Scroll/scroll-middle.png",
             CanvasSize = UDim2.fromOffset(0, 0),
             ScrollBarImageColor3 = "OutlineColor",
@@ -2737,15 +1677,17 @@ function Library:AddContextMenu(
             TopImage = "rbxasset://textures/ui/Scroll/scroll-middle.png",
             Visible = false,
             ZIndex = 10,
-            Parent = ParentGui,
+            Parent = ScreenGui,
         })
     else
         Menu = New("Frame", {
             BackgroundColor3 = "BackgroundColor",
+            BorderColor3 = "OutlineColor",
+            BorderSizePixel = 1,
             Size = typeof(Size) == "function" and Size() or Size,
             Visible = false,
             ZIndex = 10,
-            Parent = ParentGui,
+            Parent = ScreenGui,
         })
     end
     table.insert(
@@ -2754,21 +1696,6 @@ function Library:AddContextMenu(
             Parent = Menu,
         })
     )
-
-    New("UIStroke", {
-        Color = "OutlineColor",
-        Parent = Menu,
-    })
-
-    if IgnoreCornerRadius ~= true then
-        table.insert(
-            Library.Corners,
-            New("UICorner", {
-                CornerRadius = UDim.new(0, Library.CornerRadius / 2),
-                Parent = Menu,
-            })
-        )
-    end
 
     local Table = {
         Active = false,
@@ -2886,6 +1813,8 @@ end))
 local TooltipLabel = New("TextLabel", {
     AutomaticSize = Enum.AutomaticSize.Y,
     BackgroundColor3 = "BackgroundColor",
+    BorderColor3 = "OutlineColor",
+    BorderSizePixel = 1,
     TextSize = 14,
     TextWrapped = true,
     Visible = false,
@@ -2902,17 +1831,6 @@ New("UIPadding", {
 table.insert(
     Library.Scales,
     New("UIScale", {
-        Parent = TooltipLabel,
-    })
-)
-New("UIStroke", {
-    Color = "OutlineColor",
-    Parent = TooltipLabel,
-})
-table.insert(
-    Library.Corners,
-    New("UICorner", {
-        CornerRadius = UDim.new(0, Library.CornerRadius / 2),
         Parent = TooltipLabel,
     })
 )
@@ -2942,7 +1860,6 @@ function Library:AddTooltip(InfoStr: string, DisabledInfoStr: string, HoverInsta
     local function DoHover()
         if
             CurrentHoverInstance == HoverInstance
-            or Library.ActiveDialog
             or (CurrentMenu and Library:MouseIsOverFrame(CurrentMenu.Menu, Mouse))
             or (TooltipTable.Disabled and typeof(DisabledInfoStr) ~= "string")
             or (not TooltipTable.Disabled and typeof(InfoStr) ~= "string")
@@ -2951,18 +1868,11 @@ function Library:AddTooltip(InfoStr: string, DisabledInfoStr: string, HoverInsta
         end
         CurrentHoverInstance = HoverInstance
 
-        local ParentGui = HoverInstance:FindFirstAncestorOfClass("ScreenGui")
-        if ParentGui ~= ScreenGui and (Library.ActiveLoading and ParentGui ~= Library.ActiveLoading.ScreenGui) then
-            ParentGui = ScreenGui
-        end
-        TooltipLabel.Parent = ParentGui
-
         TooltipLabel.Text = TooltipTable.Disabled and DisabledInfoStr or InfoStr
         TooltipLabel.Visible = true
 
         while
-            (Library.Toggled or Library.ActiveLoading)
-            and not Library.ActiveDialog
+            Library.Toggled
             and Library:MouseIsOverFrame(HoverInstance, Mouse)
             and not (CurrentMenu and Library:MouseIsOverFrame(CurrentMenu.Menu, Mouse))
         do
@@ -3040,14 +1950,7 @@ function Library:Unload()
     end
 
     Library.Unloaded = true
-
-    if Library.ActiveLoading then
-        Library.ActiveLoading:Destroy()
-    end
-
-    if ScreenGui then
-        ScreenGui:Destroy()
-    end
+    ScreenGui:Destroy()
 
     getgenv().Library = nil
 end
@@ -3085,11 +1988,6 @@ do
             Value = Info.Default, -- Key
             Modifiers = Info.DefaultModifiers, -- Modifiers
             DisplayValue = Info.Default, -- Picker Text
-
-            Blacklisted = Info.Blacklisted,
-            BlacklistedModifiers = Info.BlacklistedModifiers,
-            Whitelisted = Info.Whitelisted,
-            WhitelistedModifiers = Info.WhitelistedModifiers,
 
             Toggled = false,
             Mode = Info.Mode,
@@ -3247,28 +2145,17 @@ do
             return ValidModifiers
         end
 
-        KeyPicker.Modifiers = VerifyModifiers(KeyPicker.Modifiers)
+        KeyPicker.Modifiers = VerifyModifiers(KeyPicker.Modifiers) -- Verify default modifiers
 
         local Picker = New("TextButton", {
             BackgroundColor3 = "MainColor",
+            BorderColor3 = "OutlineColor",
+            BorderSizePixel = 1,
             Size = UDim2.fromOffset(18, 18),
             Text = KeyPicker.Value,
             TextSize = 14,
             Parent = ToggleLabel,
         })
-
-        New("UIStroke", {
-            Color = "OutlineColor",
-            Parent = Picker,
-        })
-
-        table.insert(
-            Library.Corners,
-            New("UICorner", {
-                CornerRadius = UDim.new(0, Library.CornerRadius / 2),
-                Parent = Picker,
-            })
-        )
 
         local KeybindsToggle = { Normal = KeyPicker.Mode ~= "Toggle" }
         do
@@ -3298,13 +2185,10 @@ do
                 SizeConstraint = Enum.SizeConstraint.RelativeYY,
                 Parent = Holder,
             })
-            table.insert(
-                Library.Corners,
-                New("UICorner", {
-                    CornerRadius = UDim.new(0, Library.CornerRadius / 2),
-                    Parent = Checkbox,
-                })
-            )
+            New("UICorner", {
+                CornerRadius = UDim.new(0, Library.CornerRadius / 2),
+                Parent = Checkbox,
+            })
             New("UIStroke", {
                 Color = "OutlineColor",
                 Parent = Checkbox,
@@ -3361,7 +2245,7 @@ do
 
         local MenuTable = Library:AddContextMenu(Picker, UDim2.fromOffset(62, 0), function()
             return { Picker.AbsoluteSize.X + 1.5, 0.5 }
-        end, 1, nil, true)
+        end, 1)
         KeyPicker.Menu = MenuTable
 
         local ModeButtons = {}
@@ -3508,7 +2392,7 @@ do
         function KeyPicker:SetValue(Data)
             local Key, Mode, Modifiers = Data[1], Data[2], Data[3]
 
-            local IsKeyValid, KeyCode = pcall(function()
+            local IsKeyValid, UserInputType = pcall(function()
                 if Key == "None" then
                     Key = nil
                     return nil
@@ -3540,8 +2424,8 @@ do
             end
 
             local NewModifiers = ConvertToInputModifiers(KeyPicker.Modifiers)
-            Library:SafeCallback(KeyPicker.ChangedCallback, KeyCode, NewModifiers)
-            Library:SafeCallback(KeyPicker.Changed, KeyCode, NewModifiers)
+            Library:SafeCallback(KeyPicker.ChangedCallback, UserInputType, NewModifiers)
+            Library:SafeCallback(KeyPicker.Changed, UserInputType, NewModifiers)
 
             KeyPicker:Update()
         end
@@ -3565,49 +2449,9 @@ do
             local Input
             local ActiveModifiers = {}
 
-            local GetInput = nil; GetInput = function()
+            local GetInput = function()
                 Input = UserInputService.InputBegan:Wait()
-                if UserInputService:GetFocusedTextBox() ~= nil then
-                    return true
-                end
-
-                if Input.KeyCode == Enum.KeyCode.Escape then
-                    return false
-                end
-
-                local IsMod = IsModifierInput(Input)
-                local KeyName
-                if SpecialKeysInput[Input.UserInputType] ~= nil then
-                    KeyName = SpecialKeysInput[Input.UserInputType]
-                elseif Input.UserInputType == Enum.UserInputType.Keyboard then
-                    if IsMod then
-                        KeyName = ModifiersInput[Input.KeyCode]
-                    else
-                        KeyName = Input.KeyCode.Name
-                    end
-                end
-
-                if KeyName then
-                    if IsMod then
-                        if KeyPicker.WhitelistedModifiers and #KeyPicker.WhitelistedModifiers > 0 and not table.find(KeyPicker.WhitelistedModifiers, KeyName) then
-                            return GetInput()
-                        end
-
-                        if KeyPicker.BlacklistedModifiers and table.find(KeyPicker.BlacklistedModifiers, KeyName) then
-                            return GetInput()
-                        end
-                    else
-                        if KeyPicker.Whitelisted and #KeyPicker.Whitelisted > 0 and not table.find(KeyPicker.Whitelisted, KeyName) then
-                            return GetInput()
-                        end
-
-                        if KeyPicker.Blacklisted and table.find(KeyPicker.Blacklisted, KeyName) then
-                            return GetInput()
-                        end
-                    end
-                end
-
-                return false
+                return UserInputService:GetFocusedTextBox() ~= nil
             end
 
             repeat
@@ -3797,41 +2641,21 @@ do
 
         local Holder = New("TextButton", {
             BackgroundColor3 = ColorPicker.Value,
+            BorderColor3 = Library:GetDarkerColor(ColorPicker.Value),
+            BorderSizePixel = 1,
             Size = UDim2.fromOffset(18, 18),
             Text = "",
             Parent = ToggleLabel,
         })
 
-        local HolderStroke = New("UIStroke", {
-            Color = Library:GetDarkerColor(ColorPicker.Value),
-            Parent = Holder,
-        })
-
-        table.insert(
-            Library.Corners,
-            New("UICorner", {
-                CornerRadius = UDim.new(0, Library.CornerRadius / 2),
-                Parent = Holder,
-            })
-        )
-
         local HolderTransparency = New("ImageLabel", {
             Image = CustomImageManager.GetAsset("TransparencyTexture"),
             ImageTransparency = (1 - ColorPicker.Transparency),
             ScaleType = Enum.ScaleType.Tile,
-            Position = UDim2.new(0, -1, 0, -1),
-            Size = UDim2.new(1, 2, 1, 2),
+            Size = UDim2.fromScale(1, 1),
             TileSize = UDim2.fromOffset(9, 9),
             Parent = Holder,
         })
-
-        table.insert(
-            Library.Corners,
-            New("UICorner", {
-                CornerRadius = UDim.new(0, Library.CornerRadius / 2),
-                Parent = HolderTransparency,
-            })
-        )
 
         --// Color Menu \\--
         local ColorMenu = Library:AddContextMenu(
@@ -3970,6 +2794,8 @@ do
 
         local HueBox = New("TextBox", {
             BackgroundColor3 = "MainColor",
+            BorderColor3 = "OutlineColor",
+            BorderSizePixel = 1,
             ClearTextOnFocus = false,
             Size = UDim2.fromScale(1, 1),
             Text = "#??????",
@@ -3977,21 +2803,10 @@ do
             Parent = InfoHolder,
         })
 
-        New("UIStroke", {
-            Color = "OutlineColor",
-            Parent = HueBox,
-        })
-
-        table.insert(
-            Library.Corners,
-            New("UICorner", {
-                CornerRadius = UDim.new(0, Library.CornerRadius / 2),
-                Parent = HueBox,
-            })
-        )
-
         local RgbBox = New("TextBox", {
             BackgroundColor3 = "MainColor",
+            BorderColor3 = "OutlineColor",
+            BorderSizePixel = 1,
             ClearTextOnFocus = false,
             Size = UDim2.fromScale(1, 1),
             Text = "?, ?, ?",
@@ -3999,25 +2814,11 @@ do
             Parent = InfoHolder,
         })
 
-        New("UIStroke", {
-            Color = "OutlineColor",
-            Parent = RgbBox,
-        })
-
-        table.insert(
-            Library.Corners,
-            New("UICorner", {
-                CornerRadius = UDim.new(0, Library.CornerRadius / 2),
-                Parent = RgbBox,
-            })
-        )
-
         --// Context Menu \\--
         local ContextMenu = Library:AddContextMenu(Holder, UDim2.fromOffset(93, 0), function()
             return { Holder.AbsoluteSize.X + 1.5, 0.5 }
         end, 1)
         ColorPicker.ContextMenu = ContextMenu
-        ContextMenu.List.Padding = UDim.new(0, 6)
         do
             local function CreateButton(Text, Func)
                 local Button = New("TextButton", {
@@ -4047,7 +2848,6 @@ do
                 CreateButton("Copy Hex", function()
                     setclipboard(tostring(ColorPicker.Value:ToHex()))
                 end)
-
                 CreateButton("Copy RGB", function()
                     setclipboard(table.concat({
                         math.floor(ColorPicker.Value.R * 255),
@@ -4059,6 +2859,7 @@ do
         end
 
         --// End \\--
+
         function ColorPicker:SetHSVFromRGB(Color)
             ColorPicker.Hue, ColorPicker.Sat, ColorPicker.Vib = Color:ToHSV()
         end
@@ -4071,7 +2872,7 @@ do
             ColorPicker.Value = Color3.fromHSV(ColorPicker.Hue, ColorPicker.Sat, ColorPicker.Vib)
 
             Holder.BackgroundColor3 = ColorPicker.Value
-            HolderStroke.Color = Library:GetDarkerColor(ColorPicker.Value)
+            Holder.BorderColor3 = Library:GetDarkerColor(ColorPicker.Value)
             HolderTransparency.ImageTransparency = (1 - ColorPicker.Transparency)
 
             SatVipMap.BackgroundColor3 = Color3.fromHSV(ColorPicker.Hue, 1, 1)
@@ -4230,91 +3031,49 @@ local BaseGroupbox = {}
 do
     local Funcs = {}
 
-    function Funcs:AddDivider(Params)
-        Params = Params or {}
-
-        local Info = {}
-        if typeof(Params) == "table" then
-            Info.Visible = Params.Visible ~= false
-            Info.Text = Params.Text
-            Info.MarginTop = Params.MarginTop or Params.Margin or 0
-            Info.MarginBottom = Params.MarginBottom or Params.Margin or 0
-        elseif typeof(Params) == "string" then
-            Info.Visible = true
-            Info.Text = Params
-        end
-
+    function Funcs:AddDivider(Text)
         local Groupbox = self
         local Container = Groupbox.Container
 
         local Holder = New("Frame", {
-            Visible = Info.Visible,
             BackgroundTransparency = 1,
-            Size = UDim2.new(1, 0, 0, 6 + Info.MarginTop + Info.MarginBottom),
+            Size = UDim2.new(1, 0, 0, 6),
             Parent = Container,
         })
 
-        local InnerHolder = New("Frame", {
-            Visible = Info.Visible,
-            BackgroundTransparency = 1,
-            Size = UDim2.new(1, 0, 1, 0),
-            Parent = Holder,
-        })
-
-        New("UIPadding", {
-            PaddingTop = UDim.new(0, Info.MarginTop),
-            PaddingBottom = UDim.new(0, Info.MarginBottom),
-            Parent = Holder,
-        })
-
-        local Divider = {
-            Holder = Holder,
-            Text = Info.Text,
-            MarginTop = Info.MarginTop,
-            MarginBottom = Info.MarginBottom,
-            Type = "Divider",
-        }
-
-        if Info.Text and typeof(Info.Text) == "string" then
+        if Text then
             local TextLabel = New("TextLabel", {
                 AutomaticSize = Enum.AutomaticSize.X,
                 BackgroundTransparency = 1,
                 Size = UDim2.fromScale(1, 0),
-                Text = Info.Text,
+                Text = Text,
                 TextSize = 14,
                 TextTransparency = 0.5,
                 TextXAlignment = Enum.TextXAlignment.Center,
-                Parent = InnerHolder,
+                Parent = Holder,
             })
 
-            local Left = New("Frame", {
+            local X, _ = Library:GetTextBounds(Text, TextLabel.FontFace, TextLabel.TextSize, TextLabel.AbsoluteSize.X)
+            local SizeX = X // 2 + 10
+
+            New("Frame", {
                 AnchorPoint = Vector2.new(0, 0.5),
                 BackgroundColor3 = "MainColor",
                 BorderColor3 = "OutlineColor",
                 BorderSizePixel = 1,
                 Position = UDim2.fromScale(0, 0.5),
-                Parent = InnerHolder,
+                Size = UDim2.new(0.5, -SizeX, 0, 2),
+                Parent = Holder,
             })
-            local Right = New("Frame", {
+            New("Frame", {
                 AnchorPoint = Vector2.new(1, 0.5),
                 BackgroundColor3 = "MainColor",
                 BorderColor3 = "OutlineColor",
                 BorderSizePixel = 1,
                 Position = UDim2.fromScale(1, 0.5),
-                Parent = InnerHolder,
+                Size = UDim2.new(0.5, -SizeX, 0, 2),
+                Parent = Holder,
             })
-
-            function Divider:SetText(Text: string)
-                Divider.Text = Text
-
-                local Size = UDim2.new(0.5, -(Library:GetTextBounds(Text, TextLabel.FontFace, TextLabel.TextSize, TextLabel.AbsoluteSize.X) // 2 + 10), 0, 2)
-
-                TextLabel.Text = Text
-                Left.Size = Size
-                Right.Size = Size
-            end
-
-            Divider:SetText(Info.Text)
         else
             New("Frame", {
                 AnchorPoint = Vector2.new(0, 0.5),
@@ -4323,20 +3082,16 @@ do
                 BorderSizePixel = 1,
                 Position = UDim2.fromScale(0, 0.5),
                 Size = UDim2.new(1, 0, 0, 2),
-                Parent = InnerHolder,
+                Parent = Holder,
             })
         end
 
-        function Divider:SetVisible(Visible: boolean)
-            Holder.Visible = Visible
-            InnerHolder.Visible = Visible
-            Groupbox:Resize()
-        end
+        Groupbox:Resize()
 
-        Divider:SetVisible(Info.Visible)
-
-        table.insert(Groupbox.Elements, Divider)
-        return Divider
+        table.insert(Groupbox.Elements, {
+            Holder = Holder,
+            Type = "Divider",
+        })
     end
 
     function Funcs:AddLabel(...)
@@ -4352,7 +3107,7 @@ do
             Data.Text = Params.Text or ""
             Data.DoesWrap = Params.DoesWrap or false
             Data.Size = Params.Size or 14
-            Data.Visible = Params.Visible ~= false
+            Data.Visible = Params.Visible or true
             Data.Idx = typeof(Second) == "table" and First or nil
         else
             Data.Text = First or ""
@@ -4471,7 +3226,7 @@ do
 
                 Info.Risky = Params.Risky or false
                 Info.Disabled = Params.Disabled or false
-                Info.Visible = Params.Visible ~= false
+                Info.Visible = Params.Visible or true
                 Info.Idx = typeof(Second) == "table" and First or nil
             else
                 Info.Text = First or ""
@@ -4532,7 +3287,7 @@ do
                 Text = Button.Text,
                 TextSize = 14,
                 TextTransparency = 0.4,
-                Visible = true,
+                Visible = Button.Visible,
                 Parent = Holder,
             })
 
@@ -4541,14 +3296,6 @@ do
                 Transparency = Button.Disabled and 0.5 or 0,
                 Parent = Base,
             })
-
-            table.insert(
-                Library.Corners,
-                New("UICorner", {
-                    CornerRadius = UDim.new(0, Library.CornerRadius / 2),
-                    Parent = Base,
-                })
-            )
 
             return Base, Stroke
         end
@@ -4722,7 +3469,8 @@ do
 
         function Button:SetVisible(Visible: boolean)
             Button.Visible = Visible
-            Holder.Visible = Visible
+
+            Holder.Visible = Button.Visible
             Groupbox:Resize()
         end
 
@@ -4742,7 +3490,7 @@ do
         end
 
         Button:UpdateColors()
-        Button:SetVisible(Info.Visible)
+        Groupbox:Resize()
 
         Button.Holder = Holder
         table.insert(Groupbox.Elements, Button)
@@ -4778,7 +3526,6 @@ do
             Visible = Info.Visible,
             Addons = {},
 
-            Variant = "Checkbox",
             Type = "Toggle",
         }
 
@@ -4815,13 +3562,10 @@ do
             SizeConstraint = Enum.SizeConstraint.RelativeYY,
             Parent = Button,
         })
-        table.insert(
-            Library.Corners,
-            New("UICorner", {
-                CornerRadius = UDim.new(0, Library.CornerRadius / 2),
-                Parent = Checkbox,
-            })
-        )
+        New("UICorner", {
+            CornerRadius = UDim.new(0, Library.CornerRadius / 2),
+            Parent = Checkbox,
+        })
 
         local CheckboxStroke = New("UIStroke", {
             Color = "OutlineColor",
@@ -4985,7 +3729,6 @@ do
             Visible = Info.Visible,
             Addons = {},
 
-            Variant = "Switch",
             Type = "Toggle",
         }
 
@@ -5183,10 +3926,6 @@ do
     end
 
     function Funcs:AddInput(Idx, Info)
-        if typeof(Info) == "table" and (typeof(Info.VerifyValue) == "function" and Info.Finished ~= true) then
-            Info.Finished = true
-        end
-
         Info = Library:Validate(Info, Templates.Input)
 
         local Groupbox = self
@@ -5199,7 +3938,6 @@ do
             Finished = Info.Finished,
             Numeric = Info.Numeric,
             ClearTextOnFocus = Info.ClearTextOnFocus,
-            ClearTextOnBlur = Info.ClearTextOnBlur,
             Placeholder = Info.Placeholder,
             AllowEmpty = Info.AllowEmpty,
             EmptyReset = Info.EmptyReset,
@@ -5210,7 +3948,6 @@ do
 
             Callback = Info.Callback,
             Changed = Info.Changed,
-            VerifyValue = Info.VerifyValue,
 
             Disabled = Info.Disabled,
             Visible = Info.Visible,
@@ -5237,6 +3974,8 @@ do
         local Box = New("TextBox", {
             AnchorPoint = Vector2.new(0, 1),
             BackgroundColor3 = "MainColor",
+            BorderColor3 = "OutlineColor",
+            BorderSizePixel = 1,
             ClearTextOnFocus = not Input.Disabled and Input.ClearTextOnFocus,
             PlaceholderText = Input.Placeholder,
             Position = UDim2.fromScale(0, 1),
@@ -5255,19 +3994,6 @@ do
             PaddingTop = UDim.new(0, 4),
             Parent = Box,
         })
-
-        New("UIStroke", {
-            Color = "OutlineColor",
-            Parent = Box,
-        })
-
-        table.insert(
-            Library.Corners,
-            New("UICorner", {
-                CornerRadius = UDim.new(0, Library.CornerRadius / 2),
-                Parent = Box,
-            })
-        )
 
         function Input:UpdateColors()
             if Library.Unloaded then
@@ -5295,10 +4021,6 @@ do
                 if #tostring(Text) > 0 and not tonumber(Text) then
                     Text = Input.Value
                 end
-            end
-
-            if typeof(Info.VerifyValue) == "function" and (Text ~= Input.EmptyReset and Info.VerifyValue(Text) ~= true) then
-                Text = Input.EmptyReset
             end
 
             Input.Value = Text
@@ -5337,10 +4059,6 @@ do
         if Input.Finished then
             Box.FocusLost:Connect(function(Enter)
                 if not Enter then
-                    if Input.ClearTextOnBlur then
-                        Box.Text = Input.Value
-                    end
-
                     return
                 end
 
@@ -5348,8 +4066,6 @@ do
             end)
         else
             Box:GetPropertyChangedSignal("Text"):Connect(function()
-                if Box.Text == Input.Value then return end
-                
                 Input:SetValue(Box.Text)
             end)
         end
@@ -5365,11 +4081,7 @@ do
         table.insert(Groupbox.Elements, Input)
 
         Input.Default = Input.Value
-        if typeof(Info.VerifyValue) == "function" and (Input.Default ~= Input.EmptyReset and Info.VerifyValue(Input.Default) ~= true) then
-            Input:SetValue(Input.EmptyReset)
-            Input.Default = Input.EmptyReset
-        end
-        
+
         Options[Idx] = Input
 
         return Input
@@ -5391,9 +4103,7 @@ do
             Prefix = Info.Prefix,
             Suffix = Info.Suffix,
             Compact = Info.Compact,
-            Alignment = Info.Alignment,
             Rounding = Info.Rounding,
-            HideMax = Info.HideMax,
 
             Tooltip = Info.Tooltip,
             DisabledTooltip = Info.DisabledTooltip,
@@ -5410,7 +4120,7 @@ do
 
         local Holder = New("Frame", {
             BackgroundTransparency = 1,
-            Size = UDim2.new(1, 0, 0, Info.Compact and 15 or 33),
+            Size = UDim2.new(1, 0, 0, Info.Compact and 13 or 31),
             Visible = Slider.Visible,
             Parent = Container,
         })
@@ -5431,19 +4141,15 @@ do
             Active = not Slider.Disabled,
             AnchorPoint = Vector2.new(0, 1),
             BackgroundColor3 = "MainColor",
+            BorderColor3 = "OutlineColor",
+            BorderSizePixel = 1,
             Position = UDim2.fromScale(0, 1),
-            Size = UDim2.new(1, 0, 0, 15),
+            Size = UDim2.new(1, 0, 0, 13),
             Text = "",
             Parent = Holder,
         })
 
-        New("UIStroke", {
-            Color = "OutlineColor",
-            Parent = Bar,
-        })
-
         local DisplayLabel = New("TextLabel", {
-            TextXAlignment = Enum.TextXAlignment[Slider.Alignment or "Center"],
             BackgroundTransparency = 1,
             Size = UDim2.fromScale(1, 1),
             Text = "",
@@ -5463,22 +4169,6 @@ do
             Size = UDim2.fromScale(0.5, 1),
             Parent = Bar,
         })
-
-        table.insert(
-            Library.Corners,
-            New("UICorner", {
-                CornerRadius = UDim.new(0, Library.CornerRadius / 2),
-                Parent = Bar,
-            })
-        )
-
-        table.insert(
-            Library.Corners,
-            New("UICorner", {
-                CornerRadius = UDim.new(0, Library.CornerRadius / 2),
-                Parent = Fill,
-            })
-        )
 
         function Slider:UpdateColors()
             if Library.Unloaded then
@@ -5536,7 +4226,7 @@ do
         function Slider:SetMax(Value)
             assert(Value > Slider.Min, "Max value cannot be less than the current min value.")
 
-            Slider:SetValue(math.clamp(Slider.Value, Slider.Min, Value))
+            Slider:SetValue(math.clamp(Slider.Value, Slider.Min, Value)) --this will make  so it updates. and im calling this so i dont need to add an if :P
             Slider.Max = Value
             Slider:Display()
         end
@@ -5544,7 +4234,7 @@ do
         function Slider:SetMin(Value)
             assert(Value < Slider.Max, "Min value cannot be greater than the current max value.")
 
-            Slider:SetValue(math.clamp(Slider.Value, Value, Slider.Max))
+            Slider:SetValue(math.clamp(Slider.Value, Value, Slider.Max)) --same here. adding these comments for the funny
             Slider.Min = Value
             Slider:Display()
         end
@@ -5610,14 +4300,8 @@ do
                 return
             end
 
-            if Library.ActiveTab then
-                for _, Side in Library.ActiveTab.Sides do
-                    Side.ScrollingEnabled = false
-                end
-            end
-
-            if Library.ActiveLoading and Library.ActiveLoading.Sidebar then
-                Library.ActiveLoading.Sidebar.Container.ScrollingEnabled = false
+            for _, Side in Library.ActiveTab.Sides do
+                Side.ScrollingEnabled = false
             end
 
             while IsDragInput(Input) do
@@ -5636,14 +4320,8 @@ do
                 RunService.RenderStepped:Wait()
             end
 
-            if Library.ActiveTab then
-                for _, Side in Library.ActiveTab.Sides do
-                    Side.ScrollingEnabled = true
-                end
-            end
-
-            if Library.ActiveLoading and Library.ActiveLoading.Sidebar then
-                Library.ActiveLoading.Sidebar.Container.ScrollingEnabled = true
+            for _, Side in Library.ActiveTab.Sides do
+                Side.ScrollingEnabled = true
             end
         end)
 
@@ -5717,7 +4395,6 @@ do
             TextSize = 14,
             TextXAlignment = Enum.TextXAlignment.Left,
             Visible = not not Info.Text,
-            ZIndex = 3,
             Parent = Holder,
         })
 
@@ -5725,12 +4402,13 @@ do
             Active = not Dropdown.Disabled,
             AnchorPoint = Vector2.new(0, 1),
             BackgroundColor3 = "MainColor",
+            BorderColor3 = "OutlineColor",
+            BorderSizePixel = 1,
             Position = UDim2.fromScale(0, 1),
             Size = UDim2.new(1, 0, 0, 21),
             Text = "---",
             TextSize = 14,
             TextXAlignment = Enum.TextXAlignment.Left,
-            ZIndex = 2,
             Parent = Holder,
         })
 
@@ -5739,24 +4417,6 @@ do
             PaddingRight = UDim.new(0, 4),
             Parent = Display,
         })
-
-        New("UIStroke", {
-            Color = "OutlineColor",
-            Parent = Display,
-        })
-
-        if Library.CornerRadiusDropdown == true then
-            table.insert(
-                Library.Corners,
-                New("UICorner", {
-                    CornerRadius = UDim.new(0, Library.CornerRadius / 2),
-                    Parent = Display,
-                })
-            )
-        end
-
-        -- Dropdowns cant currently use corner radius since the button is supposed to be connected with the menu
-        -- This can be done properly without some random frames and overlaying textlabel over the button after Roblox adds UICorner with specific corner radiuses
 
         local ArrowImage = New("ImageLabel", {
             AnchorPoint = Vector2.new(1, 0.5),
@@ -5805,8 +4465,7 @@ do
                     SearchBox.Text = ""
                     SearchBox.Visible = Active
                 end
-            end,
-            true
+            end
         )
         Dropdown.Menu = MenuTable
 
@@ -5889,13 +4548,11 @@ do
 
             local Count = 0
             for _, Value in Values do
-                local FormattedValue = tostring(Info.FormatListValue and Info.FormatListValue(Value) or Value)
-                if SearchBox and not FormattedValue:lower():match(SearchBox.Text:lower()) then
+                if SearchBox and not tostring(Value):lower():match(SearchBox.Text:lower()) then
                     continue
                 end
 
                 Count += 1
-
                 local IsDisabled = table.find(DisabledValues, Value)
                 local Table = {}
 
@@ -5904,7 +4561,7 @@ do
                     BackgroundTransparency = 1,
                     LayoutOrder = IsDisabled and 1 or 0,
                     Size = UDim2.new(1, 0, 0, 21),
-                    Text = FormattedValue,
+                    Text = tostring(Value),
                     TextSize = 14,
                     TextTransparency = 0.5,
                     TextXAlignment = Enum.TextXAlignment.Left,
@@ -5999,42 +4656,6 @@ do
                 Library:UpdateDependencyBoxes()
                 Library:SafeCallback(Dropdown.Callback, Dropdown.Value)
                 Library:SafeCallback(Dropdown.Changed, Dropdown.Value)
-            end
-        end
-
-        if Info.Multi then
-            function Dropdown:AddValue(Value)
-                if Dropdown.Value[Value] then return end
-                print("added " .. tostring(Value))
-                Dropdown.Value[Value] = true
-
-                Dropdown:Display()
-                for _, Button in Buttons do
-                    Button:UpdateButton()
-                end
-
-                if not Dropdown.Disabled then
-                    Library:UpdateDependencyBoxes()
-                    Library:SafeCallback(Dropdown.Callback, Dropdown.Value)
-                    Library:SafeCallback(Dropdown.Changed, Dropdown.Value)
-                end
-            end
-
-            function Dropdown:RemoveValue(Value)
-                if not Dropdown.Value[Value] then return end
-                print("removed " .. tostring(Value))
-                Dropdown.Value[Value] = nil
-
-                Dropdown:Display()
-                for _, Button in Buttons do
-                    Button:UpdateButton()
-                end
-
-                if not Dropdown.Disabled then
-                    Library:UpdateDependencyBoxes()
-                    Library:SafeCallback(Dropdown.Callback, Dropdown.Value)
-                    Library:SafeCallback(Dropdown.Changed, Dropdown.Value)
-                end
             end
         end
 
@@ -6894,13 +5515,10 @@ do
                 Visible = false,
                 Parent = BoxHolder,
             })
-            table.insert(
-                Library.Corners,
-                New("UICorner", {
-                    CornerRadius = UDim.new(0, Library.CornerRadius),
-                    Parent = DepGroupboxContainer,
-                })
-            )
+            New("UICorner", {
+                CornerRadius = UDim.new(0, Library.CornerRadius),
+                Parent = DepGroupboxContainer,
+            })
             Library:AddOutline(DepGroupboxContainer)
 
             DepGroupboxList = New("UIListLayout", {
@@ -7027,9 +5645,6 @@ function Library:Notify(...)
         Data.SoundId = Info.SoundId
         Data.Steps = Info.Steps
         Data.Persist = Info.Persist
-        Data.Icon = Info.Icon
-        Data.BigIcon = Info.BigIcon
-        Data.IconColor = Info.IconColor
     else
         Data.Description = tostring(Info)
         Data.Time = select(2, ...) or 5
@@ -7064,13 +5679,10 @@ function Library:Notify(...)
         ZIndex = 5,
         Parent = FakeBackground,
     })
-    table.insert(
-        Library.Corners,
-        New("UICorner", {
-            CornerRadius = UDim.new(0, Library.CornerRadius),
-            Parent = Holder,
-        })
-    )
+    New("UICorner", {
+        CornerRadius = UDim.new(0, Library.CornerRadius),
+        Parent = Holder,
+    })
     New("UIListLayout", {
         Padding = UDim.new(0, 4),
         Parent = Holder,
@@ -7084,76 +5696,6 @@ function Library:Notify(...)
     })
     Library:AddOutline(Holder)
 
-    local ContentContainer = New("Frame", {
-        BackgroundTransparency = 1,
-        AutomaticSize = Enum.AutomaticSize.XY,
-        Size = UDim2.fromScale(1, 0),
-        Parent = Holder,
-    })
-    
-    if Data.BigIcon then
-        New("UIListLayout", {
-            Padding = UDim.new(0, 8),
-            FillDirection = Enum.FillDirection.Horizontal,
-            VerticalAlignment = Enum.VerticalAlignment.Center,
-            Parent = ContentContainer,
-        })
-    end
-
-    local BigIconLabel
-    if Data.BigIcon then
-        local ParsedIcon = Library:GetCustomIcon(Data.BigIcon)
-        if ParsedIcon then
-            BigIconLabel = New("ImageLabel", {
-                BackgroundTransparency = 1,
-                Size = UDim2.fromOffset(24, 24),
-                Image = ParsedIcon.Url,
-                ImageColor3 = Data.IconColor or "AccentColor",
-                ImageRectOffset = ParsedIcon.ImageRectOffset,
-                ImageRectSize = ParsedIcon.ImageRectSize,
-                Parent = ContentContainer,
-            })
-        end
-    end
-
-    local TextContainer = New("Frame", {
-        BackgroundTransparency = 1,
-        AutomaticSize = Enum.AutomaticSize.XY,
-        Size = UDim2.fromScale(0, 0),
-        Parent = ContentContainer,
-    })
-    New("UIListLayout", {
-        Padding = UDim.new(0, 4),
-        Parent = TextContainer,
-    })
-    
-    local TitleContainer
-    if Data.Title then
-        TitleContainer = New("Frame", {
-            BackgroundTransparency = 1,
-            Size = UDim2.fromScale(0, 0),
-            Parent = TextContainer,
-        })
-    end
-
-    local IconLabel
-    if Data.Icon and TitleContainer then
-        local ParsedIcon = Library:GetCustomIcon(Data.Icon)
-        if ParsedIcon then
-            IconLabel = New("ImageLabel", {
-                BackgroundTransparency = 1,
-                AnchorPoint = Vector2.new(0, 0.5),
-                Position = UDim2.new(0, 0, 0.5, 1),
-                Size = UDim2.fromOffset(15, 15),
-                Image = ParsedIcon.Url,
-                ImageColor3 = Data.IconColor or "FontColor",
-                ImageRectOffset = ParsedIcon.ImageRectOffset,
-                ImageRectSize = ParsedIcon.ImageRectSize,
-                Parent = TitleContainer,
-            })
-        end
-    end
-
     local Title
     local Desc
     local TitleX = 0
@@ -7163,53 +5705,46 @@ function Library:Notify(...)
 
     if Data.Title then
         Title = New("TextLabel", {
-            AutomaticSize = Enum.AutomaticSize.None,
+            AutomaticSize = Enum.AutomaticSize.X,
             BackgroundTransparency = 1,
-            AnchorPoint = Vector2.new(0, 0.5),
-            Position = UDim2.new(0, (Data.Icon and 21 or 0), 0.5, 0),
             Size = UDim2.fromScale(0, 0),
             Text = Data.Title,
             TextSize = 15,
             TextXAlignment = Enum.TextXAlignment.Left,
-            TextYAlignment = Enum.TextYAlignment.Center,
             TextWrapped = true,
-            Parent = TitleContainer,
+            Parent = Holder,
         })
     end
 
     if Data.Description then
         Desc = New("TextLabel", {
-            AutomaticSize = Enum.AutomaticSize.None,
+            AutomaticSize = Enum.AutomaticSize.X,
             BackgroundTransparency = 1,
             Size = UDim2.fromScale(0, 0),
             Text = Data.Description,
             TextSize = 14,
             TextXAlignment = Enum.TextXAlignment.Left,
             TextWrapped = true,
-            Parent = TextContainer,
+            Parent = Holder,
         })
     end
 
     function Data:Resize()
-        local ExtraWidth = BigIconLabel and 32 or 0
-        local IconWidth = IconLabel and 21 or 0
-
         if Title then
             local X, Y =
-                Library:GetTextBounds(Title.Text, Title.FontFace, Title.TextSize, (NotificationArea.AbsoluteSize.X / Library.DPIScale) - 24 - ExtraWidth - IconWidth)
-            Title.Size = UDim2.fromOffset(X, Y)
-            TitleX = X + IconWidth
-            TitleContainer.Size = UDim2.fromOffset(TitleX, math.max(Y, IconLabel and 16 or 0))
+                Library:GetTextBounds(Title.Text, Title.FontFace, Title.TextSize, (NotificationArea.AbsoluteSize.X / Library.DPIScale) - 24)
+            Title.Size = UDim2.fromOffset(0, Y)
+            TitleX = X
         end
 
         if Desc then
             local X, Y =
-                Library:GetTextBounds(Desc.Text, Desc.FontFace, Desc.TextSize, (NotificationArea.AbsoluteSize.X / Library.DPIScale) - 24 - ExtraWidth)
-            Desc.Size = UDim2.fromOffset(X, Y)
+                Library:GetTextBounds(Desc.Text, Desc.FontFace, Desc.TextSize, (NotificationArea.AbsoluteSize.X / Library.DPIScale) - 24)
+            Desc.Size = UDim2.fromOffset(0, Y)
             DescX = X
         end
 
-        FakeBackground.Size = UDim2.fromOffset(math.max(TitleX, DescX) + 24 + ExtraWidth, 0)
+        FakeBackground.Size = UDim2.fromOffset(math.max(TitleX, DescX) + 24, 0)
     end
 
     function Data:ChangeTitle(Text)
@@ -7353,7 +5888,7 @@ function Library:CreateWindow(WindowInfo)
         WindowInfo.Font = Font.fromEnum(WindowInfo.Font)
     end
     WindowInfo.CornerRadius = math.min(WindowInfo.CornerRadius, 20)
-    
+
     --// Old Naming \\--
     if WindowInfo.Compact ~= nil then
         WindowInfo.SidebarCompacted = WindowInfo.Compact
@@ -7387,9 +5922,6 @@ function Library:CreateWindow(WindowInfo)
     local ResizeButton
     local Tabs
     local Container
-    local BackgroundImage
-    local BottomBackground
-    local FooterLabel
 
     local InitialLeftWidth = math.ceil(WindowInfo.Size.X.Offset * 0.3)
     local IsCompact = WindowInfo.SidebarCompacted
@@ -7412,13 +5944,10 @@ function Library:CreateWindow(WindowInfo)
             Visible = false,
             Parent = ScreenGui,
         })
-        table.insert(
-            Library.Corners,
-            New("UICorner", {
-                CornerRadius = UDim.new(0, WindowInfo.CornerRadius),
-                Parent = MainFrame,
-            })
-        )
+        New("UICorner", {
+            CornerRadius = UDim.new(0, WindowInfo.CornerRadius),
+            Parent = MainFrame,
+        })
         table.insert(
             Library.Scales,
             New("UIScale", {
@@ -7439,7 +5968,7 @@ function Library:CreateWindow(WindowInfo)
         })
 
         if WindowInfo.BackgroundImage then
-            BackgroundImage = New("ImageLabel", {
+            New("ImageLabel", {
                 Image = WindowInfo.BackgroundImage,
                 Position = UDim2.fromScale(0, 0),
                 Size = UDim2.fromScale(1, 1),
@@ -7449,14 +5978,6 @@ function Library:CreateWindow(WindowInfo)
                 ImageTransparency = 0.75,
                 Parent = MainFrame,
             })
-
-            table.insert(
-                Library.Corners,
-                New("UICorner", {
-                    CornerRadius = UDim.new(0, WindowInfo.CornerRadius),
-                    Parent = BackgroundImage,
-                })
-            )
         end
 
         if WindowInfo.Center then
@@ -7486,11 +6007,10 @@ function Library:CreateWindow(WindowInfo)
         })
 
         if WindowInfo.Icon then
-            local Icon = Library:GetCustomIcon(WindowInfo.Icon)
             WindowIcon = New("ImageLabel", {
-                Image = Icon.Url,
-                ImageRectOffset = Icon.ImageRectOffset,
-                ImageRectSize = Icon.ImageRectSize,
+                Image = if tonumber(WindowInfo.Icon)
+                    then string.format("rbxassetid://%d", WindowInfo.Icon)
+                    else WindowInfo.Icon,
                 Size = WindowInfo.IconSize,
                 Parent = TitleHolder,
             })
@@ -7597,13 +6117,10 @@ function Library:CreateWindow(WindowInfo)
             FlexMode = Enum.UIFlexMode.Shrink,
             Parent = SearchBox,
         })
-        table.insert(
-            Library.Corners,
-            New("UICorner", {
-                CornerRadius = UDim.new(0, WindowInfo.CornerRadius),
-                Parent = SearchBox,
-            })
-        )
+        New("UICorner", {
+            CornerRadius = UDim.new(0, WindowInfo.CornerRadius),
+            Parent = SearchBox,
+        })
         New("UIPadding", {
             PaddingBottom = UDim.new(0, 8),
             PaddingLeft = UDim.new(0, 8),
@@ -7645,14 +6162,14 @@ function Library:CreateWindow(WindowInfo)
         end
 
         --// Bottom Bar \\--
-        BottomBackground = New("Frame", {
+        local BottomBackground = New("Frame", {
             AnchorPoint = Vector2.new(0, 1),
             BackgroundColor3 = function()
                 return Library:GetBetterColor(Library.Scheme.BackgroundColor, 4)
             end,
             Position = UDim2.fromScale(0, 1),
-            Size = UDim2.new(1, 0, 0, 20 + WindowInfo.CornerRadius),
-            Parent = MainFrame
+            Size = UDim2.new(1, 0, 0, WindowInfo.CornerRadius * 2),
+            Parent = MainFrame,
         })
         Library:MakeLine(MainFrame, {
             AnchorPoint = Vector2.new(0, 1),
@@ -7667,16 +6184,13 @@ function Library:CreateWindow(WindowInfo)
             Size = UDim2.new(1, 0, 0, 20),
             Parent = MainFrame,
         })
-        table.insert(
-            Library.Corners,
-            New("UICorner", {
-                CornerRadius = UDim.new(0, WindowInfo.CornerRadius),
-                Parent = BottomBackground,
-            })
-        )
+        New("UICorner", {
+            CornerRadius = UDim.new(0, WindowInfo.CornerRadius),
+            Parent = BottomBackground,
+        })
 
         --// Footer
-        FooterLabel = New("TextLabel", {
+        New("TextLabel", {
             BackgroundTransparency = 1,
             Size = UDim2.fromScale(1, 1),
             Text = WindowInfo.Footer,
@@ -7757,51 +6271,6 @@ function Library:CreateWindow(WindowInfo)
 
         WindowTitle.Text = title
         WindowInfo.Title = title
-    end
-
-    if WindowInfo.BackgroundImage then
-        function Window:SetBackgroundImage(Image: string)
-            assert(typeof(Image) == "string", "Expected string for Image got: " .. typeof(Image))
-    
-            BackgroundImage.Image = Image
-            WindowInfo.BackgroundImage = Image
-        end
-    end
-
-    function Window:SetFooter(footer: string)
-        assert(typeof(footer) == "string", "Expected string for footer got: " .. typeof(footer))
-
-        FooterLabel.Text = footer
-        WindowInfo.Footer = footer
-    end
-
-    function Window:SetCornerRadius(Radius: number)
-        assert(typeof(Radius) == "number", "Expected number for Radius got: " .. typeof(Radius))
-        Radius = math.min(Radius, 20)
-
-        for _, UICorner in Library.Corners do
-            if UICorner.CornerRadius.Offset == Library.CornerRadius / 2 then
-                UICorner.CornerRadius = UDim.new(0, Radius / 2)
-            else
-                UICorner.CornerRadius = UDim.new(0, Radius)
-            end
-        end
-
-        Library.CornerRadius = Radius
-        WindowInfo.CornerRadius = Radius
-
-        ResizeButton.Position = UDim2.new(1, -Radius / 4, 0, 0)
-        BottomBackground.Size = UDim2.new(1, 0, 0, 20 + Radius)
-
-        for _, Tab in Library.Tabs do
-            if Tab.IsKeyTab then
-                continue
-            end
-
-            for _, Tabbox in Tab.Tabboxes do
-                Tabbox:UpdateCorners()
-            end
-        end
     end
 
     local function ApplyCompact()
@@ -8049,13 +6518,10 @@ function Library:CreateWindow(WindowInfo)
                 Size = UDim2.new(1, -5, 0, 0),
                 Parent = WarningBoxHolder,
             })
-            table.insert(
-                Library.Corners,
-                New("UICorner", {
-                    CornerRadius = UDim.new(0, WindowInfo.CornerRadius),
-                    Parent = WarningBox,
-                })
-            )
+            New("UICorner", {
+                CornerRadius = UDim.new(0, WindowInfo.CornerRadius),
+                Parent = WarningBox,
+            })
             WarningBoxOutline, WarningBoxShadowOutline = Library:AddOutline(WarningBox)
 
             WarningBoxScrollingFrame = New("ScrollingFrame", {
@@ -8117,7 +6583,6 @@ function Library:CreateWindow(WindowInfo)
             Groupboxes = {},
             Tabboxes = {},
             DependencyGroupboxes = {},
-            Description = Description,
             Sides = {
                 TabLeft,
                 TabRight,
@@ -8265,13 +6730,10 @@ function Library:CreateWindow(WindowInfo)
                     Size = UDim2.fromScale(1, 0),
                     Parent = BoxHolder,
                 })
-                table.insert(
-                    Library.Corners,
-                    New("UICorner", {
-                        CornerRadius = UDim.new(0, WindowInfo.CornerRadius),
-                        Parent = GroupboxHolder,
-                    })
-                )
+                New("UICorner", {
+                    CornerRadius = UDim.new(0, WindowInfo.CornerRadius),
+                    Parent = GroupboxHolder,
+                })
                 Library:AddOutline(GroupboxHolder)
 
                 Library:MakeLine(GroupboxHolder, {
@@ -8341,10 +6803,6 @@ function Library:CreateWindow(WindowInfo)
                 GroupboxHolder.Size = UDim2.new(1, 0, 0, (GroupboxList.AbsoluteContentSize.Y / Library.DPIScale) + 49)
             end
 
-            Library:GiveSignal(GroupboxList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-                Groupbox:Resize()
-            end))
-
             setmetatable(Groupbox, BaseGroupbox)
 
             Groupbox:Resize()
@@ -8387,13 +6845,10 @@ function Library:CreateWindow(WindowInfo)
                     Size = UDim2.fromScale(1, 0),
                     Parent = BoxHolder,
                 })
-                table.insert(
-                    Library.Corners,
-                    New("UICorner", {
-                        CornerRadius = UDim.new(0, WindowInfo.CornerRadius),
-                        Parent = TabboxHolder,
-                    })
-                )
+                New("UICorner", {
+                    CornerRadius = UDim.new(0, WindowInfo.CornerRadius),
+                    Parent = TabboxHolder,
+                })
                 Library:AddOutline(TabboxHolder)
 
                 TabboxButtons = New("Frame", {
@@ -8408,112 +6863,23 @@ function Library:CreateWindow(WindowInfo)
                 })
             end
 
-            local TotalButtons, TotalTabs = 0, 1
             local Tabbox = {
                 ActiveTab = nil,
 
                 BoxHolder = BoxHolder,
                 Holder = TabboxHolder,
-                Tabs = {}
+                Tabs = {},
             }
 
-            function Tabbox:UpdateCorners()
-                for _, Tab in Tabbox.Tabs do
-                    Tab:UpdateCorners()
-                end
-            end
-
-            function Tabbox:AddTab(Name, IconName)
-                local TabIndex = TotalTabs
-
-                TotalButtons = TotalButtons + 1
-                TotalTabs = TotalTabs + 1
-
-                local BoxIcon = Library:GetCustomIcon(IconName)
-
+            function Tabbox:AddTab(Name)
                 local Button = New("TextButton", {
                     BackgroundColor3 = "MainColor",
                     BackgroundTransparency = 0,
                     Size = UDim2.fromOffset(0, 34),
-                    Text = "",
-                    Parent = TabboxButtons,
-                })
-
-                table.insert(
-                    Library.Corners,
-                    New("UICorner", {
-                        CornerRadius = UDim.new(0, WindowInfo.CornerRadius),
-                        Parent = Button,
-                    })
-                )
-
-                local BottomCover = New("Frame", {
-                    Name = "BottomCover",
-                    BackgroundColor3 = "MainColor",
-                    BorderSizePixel = 0,
-                    Position = UDim2.new(0, 0, 1, -WindowInfo.CornerRadius),
-                    Size = UDim2.new(1, 0, 0, WindowInfo.CornerRadius),
-                    Parent = Button,
-                })
-
-                local LeftCover = New("Frame", {
-                    Name = "LeftCover",
-                    BackgroundColor3 = "MainColor",
-                    BorderSizePixel = 0,
-                    Position = UDim2.new(0, 0, 0, 0),
-                    Size = UDim2.new(0, WindowInfo.CornerRadius, 1, 0),
-                    Visible = false,
-                    Parent = Button,
-                })
-
-                local RightCover = New("Frame", {
-                    Name = "RightCover",
-                    AnchorPoint = Vector2.new(1, 0),
-                    BackgroundColor3 = "MainColor",
-                    BorderSizePixel = 0,
-                    Position = UDim2.new(1, 0, 0, 0),
-                    Size = UDim2.new(0, WindowInfo.CornerRadius, 1, 0),
-                    Visible = false,
-                    Parent = Button,
-                })
-
-                local ButtonContent = New("Frame", {
-                    AnchorPoint = Vector2.new(0.5, 0.5),
-                    AutomaticSize = Enum.AutomaticSize.X,
-                    BackgroundTransparency = 1,
-                    Position = UDim2.fromScale(0.5, 0.5),
-                    Size = UDim2.fromOffset(0, 16),
-                    Parent = Button,
-                })
-                New("UIListLayout", {
-                    FillDirection = Enum.FillDirection.Horizontal,
-                    HorizontalAlignment = Enum.HorizontalAlignment.Center,
-                    VerticalAlignment = Enum.VerticalAlignment.Center,
-                    Padding = UDim.new(0, 8),
-                    Parent = ButtonContent,
-                })
-
-                local ButtonIcon
-                if BoxIcon then
-                    ButtonIcon = New("ImageLabel", {
-                        Image = BoxIcon.Url,
-                        ImageColor3 = BoxIcon.Custom and "WhiteColor" or "AccentColor",
-                        ImageRectOffset = BoxIcon.ImageRectOffset,
-                        ImageRectSize = BoxIcon.ImageRectSize,
-                        ImageTransparency = 0.5,
-                        Size = UDim2.fromOffset(16, 16),
-                        Parent = ButtonContent,
-                    })
-                end
-
-                local ButtonLabel = New("TextLabel", {
-                    AutomaticSize = Enum.AutomaticSize.X,
-                    BackgroundTransparency = 1,
-                    Size = UDim2.fromOffset(0, 16),
                     Text = Name,
                     TextSize = 15,
                     TextTransparency = 0.5,
-                    Parent = ButtonContent,
+                    Parent = TabboxButtons,
                 })
 
                 local Line = Library:MakeLine(Button, {
@@ -8545,12 +6911,6 @@ function Library:CreateWindow(WindowInfo)
                     ButtonHolder = Button,
                     Container = Container,
 
-                    ButtonCovers = {
-                        BottomCover = BottomCover,
-                        LeftCover = LeftCover,
-                        RightCover = RightCover
-                    },
-
                     Tab = Tab,
                     Elements = {},
                     DependencyBoxes = {},
@@ -8562,14 +6922,7 @@ function Library:CreateWindow(WindowInfo)
                     end
 
                     Button.BackgroundTransparency = 1
-                    BottomCover.BackgroundTransparency = 1
-                    LeftCover.BackgroundTransparency = 1
-                    RightCover.BackgroundTransparency = 1
-
-                    ButtonLabel.TextTransparency = 0
-                    if ButtonIcon then
-                        ButtonIcon.ImageTransparency = 0
-                    end
+                    Button.TextTransparency = 0
                     Line.Visible = false
 
                     Container.Visible = true
@@ -8580,14 +6933,7 @@ function Library:CreateWindow(WindowInfo)
 
                 function Tab:Hide()
                     Button.BackgroundTransparency = 0
-                    BottomCover.BackgroundTransparency = 0
-                    LeftCover.BackgroundTransparency = 0
-                    RightCover.BackgroundTransparency = 0
-
-                    ButtonLabel.TextTransparency = 0.5
-                    if ButtonIcon then
-                        ButtonIcon.ImageTransparency = 0.5
-                    end
+                    Button.TextTransparency = 0.5
                     Line.Visible = true
                     Container.Visible = false
 
@@ -8602,17 +6948,6 @@ function Library:CreateWindow(WindowInfo)
                     TabboxHolder.Size = UDim2.new(1, 0, 0, (List.AbsoluteContentSize.Y / Library.DPIScale) + 49)
                 end
 
-                function Tab:UpdateCorners()
-                    LeftCover.Visible = TabIndex ~= 1
-                    RightCover.Visible = TabIndex ~= TotalButtons
-        
-                    BottomCover.Position = UDim2.new(0, 0, 1, -WindowInfo.CornerRadius)
-                    BottomCover.Size = UDim2.new(1, 0, 0, WindowInfo.CornerRadius)
-        
-                    LeftCover.Size = UDim2.new(0, WindowInfo.CornerRadius, 1, 0)
-                    RightCover.Size = UDim2.new(0, WindowInfo.CornerRadius, 1, 0)
-                end
-
                 --// Execution \\--
                 if not Tabbox.ActiveTab then
                     Tab:Show()
@@ -8623,7 +6958,6 @@ function Library:CreateWindow(WindowInfo)
                 setmetatable(Tab, BaseGroupbox)
 
                 Tabbox.Tabs[Name] = Tab
-                Tabbox:UpdateCorners()
 
                 return Tab
             end
@@ -8708,14 +7042,6 @@ function Library:CreateWindow(WindowInfo)
             Window:HideTabInfo()
 
             Library.ActiveTab = nil
-        end
-
-        function Tab:SetVisible(Visible: boolean)
-            TabButton.Visible = Visible
-
-            if not Visible and Library.ActiveTab == Tab then
-                Tab:Hide()
-            end
         end
 
         --// Execution \\--
@@ -8834,7 +7160,6 @@ function Library:CreateWindow(WindowInfo)
         --// Tab Table \\--
         local Tab = {
             Elements = {},
-            Description = Description,
             IsKeyTab = true,
         }
 
@@ -8849,6 +7174,8 @@ function Library:CreateWindow(WindowInfo)
 
             local Box = New("TextBox", {
                 BackgroundColor3 = "MainColor",
+                BorderColor3 = "OutlineColor",
+                BorderSizePixel = 1,
                 PlaceholderText = "Key",
                 Size = UDim2.new(1, -71, 1, 0),
                 TextSize = 14,
@@ -8860,38 +7187,18 @@ function Library:CreateWindow(WindowInfo)
                 PaddingRight = UDim.new(0, 8),
                 Parent = Box,
             })
-            New("UIStroke", {
-                Color = "OutlineColor",
-                Parent = Box,
-            })
-            table.insert(
-                Library.Corners,
-                New("UICorner", {
-                    CornerRadius = UDim.new(0, Library.CornerRadius / 2),
-                    Parent = Box,
-                })
-            )
 
             local Button = New("TextButton", {
                 AnchorPoint = Vector2.new(1, 0),
                 BackgroundColor3 = "MainColor",
+                BorderColor3 = "OutlineColor",
+                BorderSizePixel = 1,
                 Position = UDim2.fromScale(1, 0),
                 Size = UDim2.new(0, 63, 1, 0),
                 Text = "Execute",
                 TextSize = 14,
                 Parent = Holder,
             })
-            New("UIStroke", {
-                Color = "OutlineColor",
-                Parent = Button,
-            })
-            table.insert(
-                Library.Corners,
-                New("UICorner", {
-                    CornerRadius = UDim.new(0, Library.CornerRadius / 2),
-                    Parent = Button,
-                })
-            )
 
             Button.InputBegan:Connect(function(Input)
                 if not IsClickInput(Input) then
@@ -8908,7 +7215,6 @@ function Library:CreateWindow(WindowInfo)
 
         function Tab:RefreshSides() end
         function Tab:Resize() end
-        function Tab:UpdateCorners() end
 
         function Tab:Hover(Hovering)
             if Library.ActiveTab == Tab then
@@ -8975,14 +7281,6 @@ function Library:CreateWindow(WindowInfo)
             Library.ActiveTab = nil
         end
 
-        function Tab:SetVisible(Visible: boolean)
-            TabButton.Visible = Visible
-
-            if not Visible and Library.ActiveTab == Tab then
-                Tab:Hide()
-            end
-        end
-
         --// Execution \\--
         if not Library.ActiveTab then
             Tab:Show()
@@ -9004,484 +7302,7 @@ function Library:CreateWindow(WindowInfo)
         return Tab
     end
 
-    function Window:AddDialog(Idx, Info)
-        Info = Library:Validate(Info, Templates.Dialog)
-
-        local DialogFrame
-        local DialogOverlay
-        local DialogContainer
-        local ButtonsHolder
-        local FooterButtonsList = {}
-
-        DialogOverlay = New("TextButton", {
-            AutoButtonColor = false,
-            BackgroundColor3 = "DarkColor",
-            BackgroundTransparency = 1,
-            Size = UDim2.fromScale(1, 1),
-            Text = "",
-            Active = false,
-            ZIndex = 9000,
-            Visible = true,
-            Parent = MainFrame,
-        })
-        TweenService:Create(DialogOverlay, Library.TweenInfo, {
-            BackgroundTransparency = 0.5,
-        }):Play()
-
-        DialogFrame = New("TextButton", {
-            AnchorPoint = Vector2.new(0.5, 0.5),
-            BackgroundColor3 = "BackgroundColor",
-            Position = UDim2.fromScale(0.5, 0.5),
-            Size = UDim2.fromOffset(300, 0),
-            AutomaticSize = Enum.AutomaticSize.Y,
-            Text = "",
-            AutoButtonColor = false,
-            ZIndex = 9001,
-            Parent = DialogOverlay,
-        })
-        table.insert(
-            Library.Corners,
-            New("UICorner", {
-                CornerRadius = UDim.new(0, WindowInfo.CornerRadius),
-                Parent = DialogFrame,
-            })
-        )
-        Library:AddOutline(DialogFrame)
-
-        local InnerContainer = New("Frame", {
-            BackgroundTransparency = 1,
-            Size = UDim2.fromScale(1, 0),
-            AutomaticSize = Enum.AutomaticSize.Y,
-            ZIndex = 9002,
-            Parent = DialogFrame,
-        })
-        local DialogScale = New("UIScale", {
-            Scale = 0.95,
-            Parent = DialogFrame,
-        })
-        TweenService:Create(DialogScale, Library.TweenInfo, {
-            Scale = 1
-        }):Play()
-        local _InnerPadding = New("UIPadding", {
-            PaddingBottom = UDim.new(0, 15),
-            PaddingLeft = UDim.new(0, 15),
-            PaddingRight = UDim.new(0, 15),
-            PaddingTop = UDim.new(0, 15),
-            Parent = InnerContainer,
-        })
-        local _InnerLayout = New("UIListLayout", {
-            Padding = UDim.new(0, 10),
-            SortOrder = Enum.SortOrder.LayoutOrder,
-            Parent = InnerContainer,
-        })
-
-        local HeaderContainer = New("Frame", {
-            BackgroundTransparency = 1,
-            Size = UDim2.fromScale(1, 0),
-            AutomaticSize = Enum.AutomaticSize.Y,
-            LayoutOrder = 1,
-            ZIndex = 9002,
-            Parent = InnerContainer,
-        })
-        New("UIListLayout", {
-            Padding = UDim.new(0, 6),
-            SortOrder = Enum.SortOrder.LayoutOrder,
-            Parent = HeaderContainer,
-        })
-        New("UIPadding", {
-            PaddingBottom = UDim.new(0, 5),
-            Parent = HeaderContainer,
-        })
-
-        local TitleRow = New("Frame", {
-            BackgroundTransparency = 1,
-            Size = UDim2.new(1, 0, 0, 20),
-            AutomaticSize = Enum.AutomaticSize.Y,
-            LayoutOrder = 1,
-            ZIndex = 9002,
-            Parent = HeaderContainer,
-        })
-        New("UIListLayout", {
-            Padding = UDim.new(0, 6),
-            FillDirection = Enum.FillDirection.Horizontal,
-            VerticalAlignment = Enum.VerticalAlignment.Center,
-            SortOrder = Enum.SortOrder.LayoutOrder,
-            Parent = TitleRow,
-        })
-
-        if Info.Icon then
-            local ParsedIcon = Library:GetCustomIcon(Info.Icon)
-            if ParsedIcon then
-                local IconImg = New("ImageLabel", {
-                    BackgroundTransparency = 1,
-                    Size = UDim2.fromOffset(16, 16),
-                    Image = ParsedIcon.Url,
-                    ImageColor3 = "FontColor",
-                    ImageRectOffset = ParsedIcon.ImageRectOffset,
-                    ImageRectSize = ParsedIcon.ImageRectSize,
-                    LayoutOrder = 1,
-                    ZIndex = 9002,
-                    Parent = TitleRow,
-                })
-                if Info.TitleColor then
-                    IconImg.ImageColor3 = Info.TitleColor
-                end
-            end
-        end
-
-        local TitleLabel = New("TextLabel", {
-            BackgroundTransparency = 1,
-            Size = UDim2.new(1, 0, 0, 18),
-            AutomaticSize = Enum.AutomaticSize.Y,
-            Text = Info.Title,
-            TextSize = 18,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            LayoutOrder = 2,
-            ZIndex = 9002,
-            Parent = TitleRow,
-        })
-        if Info.TitleColor then
-            TitleLabel.TextColor3 = Info.TitleColor
-        end
-
-        local DescriptionLabel = New("TextLabel", {
-            BackgroundTransparency = 1,
-            Size = UDim2.new(1, 0, 0, 14),
-            AutomaticSize = Enum.AutomaticSize.Y,
-            Text = Info.Description,
-            TextSize = 14,
-            TextTransparency = Info.DescriptionColor and 0 or 0.2,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            TextWrapped = true,
-            LayoutOrder = 2,
-            ZIndex = 9002,
-            Parent = HeaderContainer,
-        })
-        if Info.DescriptionColor then
-            DescriptionLabel.TextColor3 = Info.DescriptionColor
-        end
-
-        DialogContainer = New("Frame", {
-            BackgroundTransparency = 1,
-            Size = UDim2.fromScale(1, 0),
-            AutomaticSize = Enum.AutomaticSize.Y,
-            LayoutOrder = 4,
-            ZIndex = 9002,
-            Parent = InnerContainer,
-        })
-        local _DialogContainerLayout = New("UIListLayout", {
-            Padding = UDim.new(0, 8),
-            SortOrder = Enum.SortOrder.LayoutOrder,
-            Parent = DialogContainer,
-        })
-        New("UIPadding", {
-            PaddingBottom = UDim.new(0, 5),
-            Parent = DialogContainer,
-        })
-        
-        local _Sep2 = New("Frame", {
-            BackgroundColor3 = "OutlineColor",
-            BackgroundTransparency = 0,
-            BorderSizePixel = 0,
-            Size = UDim2.new(1, 0, 0, 1),
-            LayoutOrder = 5,
-            ZIndex = 9002,
-            Parent = InnerContainer,
-        })
-
-        ButtonsHolder = New("Frame", {
-            BackgroundTransparency = 1,
-            Size = UDim2.new(1, 0, 0, 0),
-            AutomaticSize = Enum.AutomaticSize.Y,
-            LayoutOrder = 6,
-            ZIndex = 9002,
-            Parent = InnerContainer,
-        })
-        New("UIListLayout", {
-            Padding = UDim.new(0, 8),
-            FillDirection = Enum.FillDirection.Horizontal,
-            HorizontalAlignment = Enum.HorizontalAlignment.Right,
-            Wraps = true,
-            SortOrder = Enum.SortOrder.LayoutOrder,
-            Parent = ButtonsHolder,
-        })
-        New("UIPadding", {
-            PaddingTop = UDim.new(0, 5),
-            Parent = ButtonsHolder,
-        })
-
-        local Dialog = {
-            Elements = {},
-            Container = DialogContainer,
-        }
-
-        function Dialog:Resize()
-            local MaxWidth = MainFrame.AbsoluteSize.X * 0.75
-            local MinWidth = 400
-
-            local TotalButtonWidth = 0
-            local ButtonCount = 0
-            local HasButtons = false
-
-            for _, BtnWrap in FooterButtonsList do
-                HasButtons = true
-                ButtonCount = ButtonCount + 1
-                TotalButtonWidth = TotalButtonWidth + BtnWrap.Container.Size.X.Offset
-            end
-
-            local TargetWidth = MinWidth
-            if HasButtons then
-                local RequiredWidth = TotalButtonWidth + ((ButtonCount - 1) * 8) + 30
-                TargetWidth = math.max(MinWidth, math.min(RequiredWidth, MaxWidth))
-            end
-
-            DialogFrame.Size = UDim2.fromOffset(TargetWidth, 0)
-
-            local _DescX, DescY = Library:GetTextBounds(DescriptionLabel.Text, Library.Scheme.Font, 14, TargetWidth - 30)
-            DescriptionLabel.Size = UDim2.new(1, 0, 0, DescY)
-
-            local HasElements = false
-            for _, v in DialogContainer:GetChildren() do
-                if not v:IsA("UIListLayout") and not v:IsA("UIPadding") then
-                    HasElements = true
-                    break
-                end
-            end
-            DialogContainer.Visible = HasElements
-
-            ButtonsHolder.Visible = HasButtons
-            _Sep2.Visible = HasButtons
-        end
-
-        function Dialog:SetTitle(Title)
-            TitleLabel.Text = Title
-            Dialog:Resize()
-        end
-
-        function Dialog:SetDescription(Description)
-            DescriptionLabel.Text = Description
-            Dialog:Resize()
-        end
-
-        function Dialog:Dismiss()
-            Library.ActiveDialog = nil
-            local CloseTween = TweenService:Create(DialogScale, Library.TweenInfo, { Scale = 0.95 })
-            TweenService:Create(DialogOverlay, Library.TweenInfo, { BackgroundTransparency = 1 }):Play()
-            CloseTween:Play()
-            
-            task.delay(Library.TweenInfo.Time, function()
-                DialogOverlay:Destroy()
-            end)
-            Library.Dialogues[Idx] = nil
-        end
-
-        DialogOverlay.MouseButton1Click:Connect(function()
-            if Info.OutsideClickDismiss then
-                Dialog:Dismiss()
-            end
-        end)
-
-        function Dialog:RemoveFooterButton(ButtonIdx)
-            if FooterButtonsList[ButtonIdx] then
-                FooterButtonsList[ButtonIdx].Container:Destroy()
-                FooterButtonsList[ButtonIdx] = nil
-            end
-        end
-
-        function Dialog:SetButtonDisabled(ButtonIdx, Disabled)
-            if FooterButtonsList[ButtonIdx] and type(FooterButtonsList[ButtonIdx].SetDisabled) == "function" then
-                FooterButtonsList[ButtonIdx]:SetDisabled(Disabled)
-            end
-        end
-
-        function Dialog:SetButtonOrder(ButtonIdx, Order)
-            if FooterButtonsList[ButtonIdx] and FooterButtonsList[ButtonIdx].Container then
-                FooterButtonsList[ButtonIdx].Container.LayoutOrder = Order
-            end
-        end
-
-        function Dialog:AddFooterButton(ButtonIdx, ButtonInfo)
-            Dialog:RemoveFooterButton(ButtonIdx)
-
-            local WaitTime = ButtonInfo.WaitTime or 0
-
-            local ButtonContainer = New("Frame", {
-                BackgroundTransparency = 1,
-                Size = UDim2.fromOffset(0, 26),
-                LayoutOrder = ButtonInfo.Order or 0,
-                ZIndex = 9002,
-                Parent = ButtonsHolder,
-            })
-            
-            local BtnColor = "MainColor"
-            local BtnOutline = "OutlineColor"
-            local Variant = ButtonInfo.Variant or "Primary"
-            
-            if Variant == "Primary" then
-                BtnColor = "FontColor"
-                BtnOutline = "FontColor"
-            elseif Variant == "Secondary" then
-                BtnColor = "MainColor"
-                BtnOutline = "OutlineColor"
-            elseif Variant == "Destructive" then
-                BtnColor = "DestructiveColor"
-                BtnOutline = "DestructiveColor"
-            elseif Variant == "Ghost" then
-                BtnColor = "BackgroundColor"
-                BtnOutline = "BackgroundColor"
-            end
-
-            local TextBtn = New("TextButton", {
-                BackgroundColor3 = BtnColor,
-                BorderColor3 = BtnOutline,
-                BackgroundTransparency = WaitTime > 0 and 0.5 or 0,
-                Size = UDim2.fromOffset(0, 26),
-                Text = "",
-                AutoButtonColor = false,
-                ZIndex = 9002,
-                Parent = ButtonContainer,
-            })
-            Library:AddOutline(TextBtn)
-            table.insert(
-                Library.Corners,
-                New("UICorner", { 
-                    CornerRadius = UDim.new(0, Library.CornerRadius), 
-                    Parent = TextBtn 
-                })
-            )
-
-            local _BtnPadding = New("UIPadding", {
-                PaddingLeft = UDim.new(0, 15),
-                PaddingRight = UDim.new(0, 15),
-                Parent = TextBtn,
-            })
-
-            local TextColor = Library.Scheme.FontColor
-            if Variant == "Primary" then
-                TextColor = Library.Scheme.BackgroundColor
-            elseif Variant == "Destructive" then
-                TextColor = Color3.new(1, 1, 1)
-            end
-            
-            local BtnLabel = New("TextLabel", {
-                BackgroundTransparency = 1,
-                Size = UDim2.fromScale(1, 1),
-                Text = ButtonInfo.Title or ButtonIdx,
-                TextColor3 = TextColor,
-                TextTransparency = WaitTime > 0 and 0.5 or 0,
-                TextSize = 14,
-                ZIndex = 9002,
-                Parent = TextBtn,
-            })
-            
-            local LabelX, _ = Library:GetTextBounds(BtnLabel.Text, Library.Scheme.Font, 14, 250)
-            ButtonContainer.Size = UDim2.fromOffset(LabelX + 30, 26)
-            TextBtn.Size = UDim2.fromOffset(LabelX + 30, 26)
-
-            local ProgressBar
-            if WaitTime > 0 then
-                ProgressBar = New("Frame", {
-                    BackgroundColor3 = "AccentColor",
-                    BorderSizePixel = 0,
-                    Position = UDim2.new(0, 0, 1, -2),
-                    Size = UDim2.new(0, 0, 0, 2),
-                    ZIndex = 2,
-                    Parent = TextBtn,
-                })
-                table.insert(
-                    Library.Corners,
-                    New("UICorner", { 
-                        CornerRadius = UDim.new(0, Library.CornerRadius), 
-                        Parent = ProgressBar 
-                    })
-                )
-            end
-
-            local IsActive = WaitTime <= 0
-
-            local ButtonWrap = {
-                Container = ButtonContainer,
-                SetDisabled = function(self, Disabled)
-                    IsActive = not Disabled
-                    if Disabled then
-                        TweenService:Create(TextBtn, Library.TweenInfo, { BackgroundTransparency = 0.5 }):Play()
-                        TweenService:Create(BtnLabel, Library.TweenInfo, { TextTransparency = 0.5 }):Play()
-                    else
-                        TweenService:Create(TextBtn, Library.TweenInfo, { BackgroundTransparency = 0 }):Play()
-                        TweenService:Create(BtnLabel, Library.TweenInfo, { TextTransparency = 0 }):Play()
-                    end
-                end
-            }
-
-            local ActiveColor = typeof(BtnColor) == "Color3" and BtnColor or Library.Scheme[BtnColor]
-            local HoverColor = Variant == "Ghost" and Library.Scheme.MainColor or Library:GetBetterColor(ActiveColor, 10)
-
-            TextBtn.MouseEnter:Connect(function()
-                if not IsActive then return end
-                TweenService:Create(TextBtn, Library.TweenInfo, {
-                    BackgroundColor3 = HoverColor
-                }):Play()
-            end)
-            TextBtn.MouseLeave:Connect(function()
-                if not IsActive then return end
-                TweenService:Create(TextBtn, Library.TweenInfo, {
-                    BackgroundColor3 = ActiveColor
-                }):Play()
-            end)
-
-            TextBtn.MouseButton1Click:Connect(function()
-                if not IsActive then return end
-                if ButtonInfo.Callback then
-                    ButtonInfo.Callback(Dialog)
-                end
-                if Info.AutoDismiss then
-                    Dialog:Dismiss()
-                end
-            end)
-
-            if WaitTime > 0 then
-                TweenService:Create(ProgressBar, TweenInfo.new(WaitTime, Enum.EasingStyle.Linear), {
-                    Size = UDim2.new(1, 0, 0, 2)
-                }):Play()
-                
-                task.delay(WaitTime, function()
-                    ButtonWrap:SetDisabled(false)
-                    if ProgressBar then
-                        TweenService:Create(ProgressBar, Library.TweenInfo, {
-                            BackgroundTransparency = 1
-                        }):Play()
-                    end
-                end)
-            end
-
-            FooterButtonsList[ButtonIdx] = ButtonWrap
-        end
-
-        for BIdx, BInfo in Info.FooterButtons do
-            if type(BIdx) == "number" and BInfo.Id then BIdx = BInfo.Id end
-            Dialog:AddFooterButton(BIdx, BInfo)
-        end
-
-        setmetatable(Dialog, BaseGroupbox)
-        Library.Dialogues[Idx] = Dialog
-
-        Dialog:Resize()
-        
-        Library.ActiveDialog = Dialog
-        return Dialog
-    end
-
-    function Window:Toggle(Value: boolean?)
-        if Library.ActiveLoading then
-            if Value == true then
-                return
-            end
-
-            if not Library.Toggled then
-                return
-            end
-        end
-
+    function Library:Toggle(Value: boolean?)
         if typeof(Value) == "boolean" then
             Library.Toggled = Value
         else
@@ -9523,10 +7344,6 @@ function Library:CreateWindow(WindowInfo)
                 end
             end
         end
-    end
-
-    function Library:Toggle(Value: boolean?)
-        return Window:Toggle(Value)
     end
 
     if WindowInfo.EnableSidebarResize then
@@ -9617,7 +7434,7 @@ function Library:CreateWindow(WindowInfo)
     if WindowInfo.EnableCompacting and WindowInfo.SidebarCompacted then
         Window:SetSidebarWidth(WindowInfo.SidebarCompactWidth)
     end
-    if WindowInfo.AutoShow and not Library.ActiveLoading then
+    if WindowInfo.AutoShow then
         task.spawn(Library.Toggle)
     end
 
@@ -9639,11 +7456,6 @@ function Library:CreateWindow(WindowInfo)
             LockButton.Button.AnchorPoint = Vector2.new(1, 0)
         else
             LockButton.Button.Position = UDim2.fromOffset(6, 46)
-        end
-
-        if WindowInfo.ShowMobileButtons == false then
-            ToggleButton.Button.Visible = false
-            LockButton.Button.Visible = false
         end
     end
 
@@ -9680,681 +7492,6 @@ function Library:CreateWindow(WindowInfo)
     end))
 
     return Window
-end
-
-function Library:CreateLoading(LoadingInfo)
-    if Library.ActiveLoading then
-        warn("Loading GUI already exists, you cannot create multiple Loading GUIs.")
-        return Library.ActiveLoading
-    end
-
-    LoadingInfo = Library:Validate(LoadingInfo, Templates.Loading)
-
-    local Loading = {
-        CurrentStep = LoadingInfo.CurrentStep,
-        TotalSteps = LoadingInfo.TotalSteps,
-
-        ShowSidebar = LoadingInfo.ShowSidebar,
-        AutoResizeHeight = LoadingInfo.AutoResizeHeight,
-        IsError = false,
-        Destroyed = false,
-
-        WindowWidth = LoadingInfo.WindowWidth,
-        WindowHeight = LoadingInfo.WindowHeight,
-        BaseWindowHeight = LoadingInfo.WindowHeight,
-        WindowErrorHeight = LoadingInfo.WindowHeight,
-
-        ContentWidth = LoadingInfo.ContentWidth,
-        SidebarWidth = LoadingInfo.SidebarWidth,
-    }
-
-    --// ScreenGui \\--
-    local ScreenGui = New("ScreenGui", {
-        Name = "ObsidianLoading",
-        DisplayOrder = 999,
-        ResetOnSpawn = false
-    })
-    ParentUI(ScreenGui)
-    Loading.ScreenGui = ScreenGui
-
-    ScreenGui.DescendantRemoving:Connect(function(Instance)
-        Library:RemoveFromRegistry(Instance)
-    end)
-
-    --// Main Frame \\--
-    local MainFrame = New("TextButton", {
-        Name = "Main",
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        BackgroundColor3 = function()
-            return Library:GetBetterColor(Library.Scheme.BackgroundColor, -1)
-        end,
-        Position = UDim2.fromScale(0.5, 0.5),
-        Size = UDim2.fromOffset(Loading.ShowSidebar and (Loading.ContentWidth + Loading.SidebarWidth) or Loading.WindowWidth, Loading.WindowHeight),
-        ClipsDescendants = true,
-        Text = "",
-        AutoButtonColor = false,
-        Parent = ScreenGui,
-    })
-    Library:AddOutline(MainFrame)
-    table.insert(Library.Corners, New("UICorner", { CornerRadius = UDim.new(0, Library.CornerRadius), Parent = MainFrame }))
-    
-    local MainScale = New("UIScale", { Parent = MainFrame })
-    table.insert(Library.Scales, MainScale)
-
-    --// Layout Containers \\--
-    local Container = New("Frame", {
-        Name = "Content",
-        BackgroundTransparency = 1,
-        Position = UDim2.fromOffset(0, 0),
-        Size = UDim2.new(0, Loading.ContentWidth, 1, 0),
-        Parent = MainFrame,
-    })
-
-    local SideBar = New("Frame", {
-        Name = "SideBar",
-        BackgroundTransparency = 1,
-        Position = UDim2.fromOffset(Loading.ContentWidth, 0),
-        Size = UDim2.new(0, Loading.ShowSidebar and Loading.SidebarWidth or 0, 1, 0),
-        ClipsDescendants = true,
-        Visible = Loading.ShowSidebar,
-        Parent = MainFrame,
-    })
-    local SidebarCorner = New("UICorner", { CornerRadius = UDim.new(0, Library.CornerRadius), Parent = SideBar })
-    table.insert(Library.Corners, SidebarCorner)
-    
-    Library:AddOutline(SideBar)
-    
-    local SidebarDivider = New("Frame", {
-        BackgroundColor3 = "OutlineColor",
-        BorderSizePixel = 0,
-        Position = UDim2.fromOffset(0, 0),
-        Size = UDim2.new(0, 1, 1, 0),
-        Visible = Loading.ShowSidebar,
-        Parent = SideBar,
-    })
-
-    --// Top Bar \\--
-    local TopBar = New("Frame", {
-        Name = "TopBar",
-        BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, 48),
-        ZIndex = 2,
-        Parent = Container,
-    })
-    Library:MakeDraggable(MainFrame, TopBar, true, true)
-
-    local TitleHolder = New("Frame", {
-        BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 1, 0),
-        Parent = TopBar,
-    })
-    New("UIListLayout", {
-        FillDirection = Enum.FillDirection.Horizontal,
-        HorizontalAlignment = Enum.HorizontalAlignment.Left,
-        VerticalAlignment = Enum.VerticalAlignment.Center,
-        Padding = UDim.new(0, 6),
-        Parent = TitleHolder,
-    })
-    New("UIPadding", {
-        PaddingLeft = UDim.new(0, 12),
-        Parent = TitleHolder,
-    })
-
-    if LoadingInfo.Icon then
-        local Icon = Library:GetCustomIcon(LoadingInfo.Icon)
-        local _WindowIcon = New("ImageLabel", {
-            Image = Icon.Url,
-            ImageRectOffset = Icon.ImageRectOffset,
-            ImageRectSize = Icon.ImageRectSize,
-            Size = LoadingInfo.IconSize,
-            Parent = TitleHolder,
-        })
-    else
-        local _WindowIcon = New("TextLabel", {
-            BackgroundTransparency = 1,
-            Size = LoadingInfo.IconSize,
-            Text = LoadingInfo.Title:sub(1, 1),
-            TextScaled = true,
-            Visible = false,
-            Parent = TitleHolder,
-        })
-    end
-
-    local TitleX = Library:GetTextBounds(
-        LoadingInfo.Title,
-        Library.Scheme.Font,
-        20,
-        TitleHolder.AbsoluteSize.X - (LoadingInfo.Icon and (LoadingInfo.IconSize.X.Offset + 6) or 0) - 12
-    )
-    local _WindowTitle = New("TextLabel", {
-        BackgroundTransparency = 1,
-        Size = UDim2.new(0, TitleX, 1, 0),
-        Text = LoadingInfo.Title,
-        TextSize = 20,
-        Parent = TitleHolder,
-    })
-
-    Library:MakeLine(Container, {
-        Position = UDim2.fromOffset(0, 48),
-        Size = UDim2.new(1, 0, 0, 1),
-    })
-
-    --// Loading Content Elements \\--
-    local InnerContent = New("Frame", {
-        Name = "InnerContent",
-        BackgroundTransparency = 1,
-        Position = UDim2.fromOffset(0, 49),
-        Size = UDim2.new(1, 0, 1, -49),
-        Parent = Container,
-    })
-
-    New("UIListLayout", {
-        FillDirection = Enum.FillDirection.Vertical,
-        HorizontalAlignment = Enum.HorizontalAlignment.Center,
-        VerticalAlignment = Enum.VerticalAlignment.Center,
-        Padding = UDim.new(0, 12),
-        Parent = InnerContent,
-    })
-
-    local IconHolder = New("Frame", {
-        Name = "IconHolder",
-        BackgroundTransparency = 1,
-        Size = UDim2.fromOffset(64, 64),
-        Parent = InnerContent,
-    })
-
-    local LoaderIcon = Library:GetCustomIcon(LoadingInfo.LoadingIcon)
-    local LoadingIcon = New("ImageLabel", {
-        Name = "LoaderIcon",
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        BackgroundTransparency = 1,
-        Position = UDim2.fromScale(0.5, 0.5),
-        Size = UDim2.fromScale(1, 1),
-        Image = LoaderIcon.Url,
-        ImageRectOffset = LoaderIcon.ImageRectOffset,
-        ImageRectSize = LoaderIcon.ImageRectSize,
-        ImageColor3 = LoadingInfo.LoadingIconColor or ((LoadingInfo.LoadingIcon == Templates.Loading.LoadingIcon) and "AccentColor" or "WhiteColor"),
-        Parent = IconHolder,
-    })
-
-    local RotationTween
-    if LoadingInfo.LoadingIconTweenTime > 0 then
-        RotationTween = TweenService:Create(
-            LoadingIcon,
-            TweenInfo.new(LoadingInfo.LoadingIconTweenTime, Enum.EasingStyle.Linear, Enum.EasingDirection.Out, -1),
-            { Rotation = 360 }
-        )
-        RotationTween:Play()
-    end
-
-    local MessageLabel = New("TextLabel", {
-        BackgroundTransparency = 1,
-        AutomaticSize = Loading.AutoResizeHeight and Enum.AutomaticSize.Y or Enum.AutomaticSize.XY,
-        Size = Loading.AutoResizeHeight and UDim2.new(1, -60, 0, 0) or UDim2.fromOffset(0, 0),
-        Text = "",
-        TextSize = 18,
-        TextWrapped = Loading.AutoResizeHeight,
-        Parent = InnerContent,
-    })
-
-    local DescriptionLabel = New("TextLabel", {
-        BackgroundTransparency = 1,
-        AutomaticSize = Loading.AutoResizeHeight and Enum.AutomaticSize.Y or Enum.AutomaticSize.XY,
-        Size = Loading.AutoResizeHeight and UDim2.new(1, -60, 0, 0) or UDim2.fromOffset(0, 0),
-        Text = "",
-        TextSize = 14,
-        TextTransparency = 0.5,
-        TextWrapped = Loading.AutoResizeHeight,
-        Parent = InnerContent,
-    })
-
-    --// Progress Bar \\--
-    local SliderBar = New("Frame", {
-        BackgroundColor3 = "MainColor",
-        Size = UDim2.new(0.7, 0, 0, 15),
-        Parent = InnerContent,
-    })
-    Library:AddOutline(SliderBar)
-    table.insert(Library.Corners, New("UICorner", { CornerRadius = UDim.new(0, Library.CornerRadius / 2), Parent = SliderBar }))
-
-    local SliderFill = New("Frame", {
-        BackgroundColor3 = "AccentColor",
-        BorderSizePixel = 0,
-        Size = UDim2.fromScale(0, 1),
-        Parent = SliderBar,
-    })
-    table.insert(Library.Corners, New("UICorner", { CornerRadius = UDim.new(0, Library.CornerRadius / 2), Parent = SliderFill }))
-
-    local ProgressLabel = New("TextLabel", {
-        BackgroundTransparency = 1,
-        Size = UDim2.fromScale(1, 1),
-        Text = "",
-        TextSize = 14,
-        ZIndex = 2,
-        Parent = SliderBar,
-    })
-    New("UIStroke", {
-        ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual,
-        Color = "DarkColor",
-        LineJoinMode = Enum.LineJoinMode.Miter,
-        Parent = ProgressLabel,
-    })
-
-    --// Sidebar Object \\--
-    local SidebarScrolling = New("ScrollingFrame", {
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        CanvasSize = UDim2.new(0, 0, 0, 0),
-        Size = UDim2.fromScale(1, 1),
-        ScrollBarThickness = 2,
-        ScrollBarImageColor3 = "OutlineColor",
-        Parent = SideBar,
-    })
-    local SidebarList = New("UIListLayout", {
-        Padding = UDim.new(0, 8),
-        SortOrder = Enum.SortOrder.LayoutOrder,
-        Parent = SidebarScrolling,
-    })
-    New("UIPadding", {
-        PaddingBottom = UDim.new(0, 12),
-        PaddingLeft = UDim.new(0, 12),
-        PaddingRight = UDim.new(0, 12),
-        PaddingTop = UDim.new(0, 12),
-        Parent = SidebarScrolling,
-    })
-
-    local SidebarObject = {
-        Elements = {},
-        DependencyBoxes = {},
-        Tabboxes = {},
-        
-        BoxHolder = SidebarScrolling,
-        Container = SidebarScrolling,
-        
-        Resize = function(self)
-            SidebarScrolling.CanvasSize = UDim2.fromOffset(0, SidebarList.AbsoluteContentSize.Y + 24)
-        end,
-        Tab = {
-            Elements = {},
-            DependencyBoxes = {},
-            DependencyGroupboxes = {},
-            Tabboxes = {},
-        },
-    }
-
-    SidebarList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        SidebarObject:Resize()
-    end)
-
-    setmetatable(SidebarObject, BaseGroupbox)
-    Loading.Sidebar = SidebarObject
-
-    --// Error Frame \\--
-    local ErrorFrame = New("Frame", {
-        Name = "Error",
-        BackgroundTransparency = 1,
-        Position = UDim2.fromOffset(0, 49),
-        Size = UDim2.new(1, 0, 1, -49),
-        ClipsDescendants = true,
-        Visible = false,
-        Parent = Container,
-    })
-
-    local _ErrorTitle = New("TextLabel", {
-        BackgroundTransparency = 1,
-        Position = UDim2.fromOffset(15, 15),
-        Size = UDim2.new(1, -30, 0, 18),
-        Text = "Error",
-        TextColor3 = "RedColor",
-        TextSize = 18,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        Parent = ErrorFrame,
-    })
-
-    local ErrorLabel = New("TextLabel", {
-        BackgroundTransparency = 1,
-        Position = UDim2.fromOffset(15, 39),
-        Size = UDim2.new(1, -30, 1, -90),
-        Text = "Error Message",
-        TextSize = 14,
-        TextTransparency = 0.2,
-        TextWrapped = true,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        TextYAlignment = Enum.TextYAlignment.Top,
-        Parent = ErrorFrame,
-    })
-
-    local ErrorButtonsDivider = New("Frame", {
-        BackgroundColor3 = "OutlineColor",
-        BackgroundTransparency = 0,
-        BorderSizePixel = 0,
-        AnchorPoint = Vector2.new(0.5, 0),
-        Position = UDim2.new(0.5, 0, 1, -48),
-        Size = UDim2.new(1, -30, 0, 1),
-        Visible = false,
-        Parent = ErrorFrame,
-    })
-
-    local ErrorButtonsHolder = New("Frame", {
-        AnchorPoint = Vector2.new(0.5, 1),
-        BackgroundTransparency = 1,
-        Position = UDim2.new(0.5, 0, 1, 0),
-        Size = UDim2.new(1, 0, 0, 42),
-        Visible = false,
-        Parent = ErrorFrame,
-    })
-    New("UIListLayout", {
-        Padding = UDim.new(0, 8),
-        FillDirection = Enum.FillDirection.Horizontal,
-        HorizontalAlignment = Enum.HorizontalAlignment.Right,
-        VerticalAlignment = Enum.VerticalAlignment.Center,
-        SortOrder = Enum.SortOrder.LayoutOrder,
-        Parent = ErrorButtonsHolder,
-    })
-    New("UIPadding", {
-        PaddingTop = UDim.new(0, 5),
-        PaddingBottom = UDim.new(0, 15),
-        PaddingRight = UDim.new(0, 15),
-        Parent = ErrorButtonsHolder,
-    })
-
-    function Loading:UpdateLayout()
-        if Loading.IsError then
-            Loading:RecalculateErrorHeight()
-        end
-
-        local ShowSidebar = Loading.ShowSidebar
-        local FinalWidth = ShowSidebar and (Loading.ContentWidth + Loading.SidebarWidth) or Loading.WindowWidth
-        local FinalHeight = Loading.IsError and Loading.WindowErrorHeight or Loading.WindowHeight
-        
-        if ShowSidebar then
-            SideBar.Visible = true
-            SidebarDivider.Visible = true
-        end
-
-        TweenService:Create(MainFrame, Library.TweenInfo, { Size = UDim2.fromOffset(FinalWidth, FinalHeight) }):Play()
-        TweenService:Create(SideBar, Library.TweenInfo, { Position = UDim2.fromOffset(Loading.ContentWidth, 0), Size = UDim2.new(0, ShowSidebar and Loading.SidebarWidth or 0, 1, 0) }):Play()
-        TweenService:Create(Container, Library.TweenInfo, { Size = UDim2.new(0, ShowSidebar and Loading.ContentWidth or Loading.WindowWidth, 1, 0) }):Play()
-
-        if not ShowSidebar then
-            task.delay(Library.TweenInfo.Time, function()
-                if not Loading.ShowSidebar then
-                    SideBar.Visible = false
-                    SidebarDivider.Visible = false
-                end
-            end)
-        end
-    end
-
-    --// Content Page \\--
-    function Loading:RecalculateLoadingHeight()
-        if not Loading.AutoResizeHeight then
-            return
-        end
-
-        local RequiredHeight = 
-              49 -- TopBar
-            + 48 -- Padding
-            + InnerContent.UIListLayout.AbsoluteContentSize.Y
-
-        Loading.WindowHeight = math.max(Loading.BaseWindowHeight, RequiredHeight)
-    end
-
-    function Loading:SetMessage(Text)
-        MessageLabel.Text = Text
-
-        if Loading.AutoResizeHeight then
-            Loading:RecalculateLoadingHeight()
-            Loading:UpdateLayout()
-        end
-    end
-
-    function Loading:SetDescription(Text)
-        DescriptionLabel.Text = Text
-
-        if Loading.AutoResizeHeight then
-            Loading:RecalculateLoadingHeight()
-            Loading:UpdateLayout()
-        end
-    end
-
-    function Loading:SetLoadingIcon(Icon)
-        local IconData = Library:GetCustomIcon(Icon)
-        LoadingIcon.Image = IconData.Url
-        LoadingIcon.ImageRectOffset = IconData.ImageRectOffset
-        LoadingIcon.ImageRectSize = IconData.ImageRectSize
-    end
-
-    function Loading:SetLoadingIconTweenTime(TweenTime)
-        if RotationTween then
-            RotationTween:Cancel()
-            RotationTween:Destroy()
-        end
-
-        if TweenTime > 0 then
-            RotationTween = TweenService:Create(
-                LoadingIcon,
-                TweenInfo.new(TweenTime, Enum.EasingStyle.Linear, Enum.EasingDirection.Out, -1),
-                { Rotation = 360 }
-            )
-            RotationTween:Play()
-        else
-            LoadingIcon.Rotation = 0
-        end
-    end
-
-    function Loading:SetLoadingIconColor(Color)
-        LoadingIcon.ImageColor3 = Color
-    end
-
-    function Loading:SetCurrentStep(Step)
-        Loading.CurrentStep = math.clamp(Step, 0, Loading.TotalSteps)
-
-        local Progress = Loading.CurrentStep / Loading.TotalSteps
-        TweenService:Create(SliderFill, Library.TweenInfo, { Size = UDim2.fromScale(Progress, 1) }):Play()
-
-        ProgressLabel.Text = string.format("%d/%d", Loading.CurrentStep, Loading.TotalSteps)
-    end
-
-    function Loading:SetTotalSteps(Steps)
-        Loading.TotalSteps = Steps
-        Loading:SetCurrentStep(Loading.CurrentStep)
-    end
-
-    --// Size \\--
-    function Loading:SetWindowHeight(Height)
-        Loading.WindowHeight = Height
-        Loading:UpdateLayout()
-    end
-
-    function Loading:SetWindowWidth(Width)
-        Loading.WindowWidth = Width
-        Loading:UpdateLayout()
-    end
-
-    function Loading:SetContentWidth(Width)
-        Loading.ContentWidth = Width
-        Loading:UpdateLayout()
-    end
-
-    function Loading:SetSidebarWidth(Width)
-        Loading.SidebarWidth = Width
-        Loading:UpdateLayout()
-    end
-
-    --// Sidebar \\--
-    function Loading:ShowSidebarPage(Bool)
-        Loading.ShowSidebar = Bool
-        Loading:UpdateLayout()
-    end
-
-    --// Error Page \\--
-    function Loading:ShowErrorPage(Enabled)
-        Loading.IsError = Enabled
-        InnerContent.Visible = not Enabled
-        ErrorFrame.Visible = Enabled
-
-        if Loading.ShowSidebar then
-            Loading:ShowSidebarPage(not Enabled)
-        else
-            Loading:UpdateLayout()
-        end
-    end
-
-    function Loading:RecalculateErrorHeight()
-        local TargetWidth = (Loading.ShowSidebar and Loading.ContentWidth or Loading.WindowWidth) - 30
-        local _, ErrorY = Library:GetTextBounds(ErrorLabel.Text, Library.Scheme.Font, 14, TargetWidth)
-
-        ErrorLabel.Size = UDim2.new(1, -30, 0, ErrorY)
-
-        local HasButtons = ErrorButtonsHolder.Visible
-        local RequiredHeight =
-              49                        -- TopBar
-            + 15                        -- Padding Top
-            + 18                        -- Title Height
-            + 6                         -- Padding between Title and Label
-            + ErrorY                    -- Label Height
-            + 15                        -- Padding between Label and Buttons
-            + (HasButtons and 48 or 0)  -- Buttons Area
-
-        Loading.WindowErrorHeight = RequiredHeight -- math.max(Loading.WindowHeight, RequiredHeight)
-    end
-
-    function Loading:SetErrorMessage(Text)
-        ErrorLabel.Text = Text
-        Loading:UpdateLayout()
-    end
-
-    function Loading:SetErrorButtons(Buttons)
-        assert(typeof(Buttons) == "table", "Buttons must be a table")
-
-        for _, button in ErrorButtonsHolder:GetChildren() do
-            if button:IsA("Frame") then 
-                button:Destroy() 
-            end
-        end
-
-        local HasButtons = GetTableSize(Buttons) > 0
-        ErrorButtonsHolder.Visible = HasButtons
-        ErrorButtonsDivider.Visible = HasButtons
-
-        for Idx, ButtonInfo in Buttons do
-            local ButtonContainer = New("Frame", {
-                BackgroundTransparency = 1,
-                Size = UDim2.fromOffset(0, 26),
-                Parent = ErrorButtonsHolder,
-            })
-            
-            local BtnColor = "MainColor"
-            local BtnOutline = "OutlineColor"
-            local Variant = ButtonInfo.Variant or "Primary"
-            
-            if Variant == "Primary" then
-                BtnColor = "FontColor"
-                BtnOutline = "FontColor"
-            elseif Variant == "Secondary" then
-                BtnColor = "MainColor"
-                BtnOutline = "OutlineColor"
-            elseif Variant == "Destructive" then
-                BtnColor = "DestructiveColor"
-                BtnOutline = "DestructiveColor"
-            elseif Variant == "Ghost" then
-                BtnColor = "BackgroundColor"
-                BtnOutline = "BackgroundColor"
-            end
-
-            local TextBtn = New("TextButton", {
-                BackgroundColor3 = BtnColor,
-                BorderColor3 = BtnOutline,
-                Size = UDim2.fromOffset(0, 26),
-                Text = "",
-                AutoButtonColor = false,
-                Parent = ButtonContainer,
-            })
-            Library:AddOutline(TextBtn)
-            table.insert(
-                Library.Corners,
-                New("UICorner", { 
-                    CornerRadius = UDim.new(0, Library.CornerRadius), 
-                    Parent = TextBtn 
-                })
-            )
-
-            New("UIPadding", {
-                PaddingLeft = UDim.new(0, 15),
-                PaddingRight = UDim.new(0, 15),
-                Parent = TextBtn,
-            })
-
-            local TextColor = Library.Scheme.FontColor
-            if Variant == "Primary" then
-                TextColor = Library.Scheme.BackgroundColor
-            elseif Variant == "Destructive" then
-                TextColor = Color3.new(1, 1, 1)
-            end
-
-            local BtnLabel = New("TextLabel", {
-                BackgroundTransparency = 1,
-                Size = UDim2.fromScale(1, 1),
-                Text = ButtonInfo.Title or Idx,
-                TextColor3 = TextColor,
-                TextSize = 14,
-                Parent = TextBtn,
-            })
-            
-            local LabelX, _ = Library:GetTextBounds(BtnLabel.Text, Library.Scheme.Font, 14, 250)
-            ButtonContainer.Size = UDim2.fromOffset(LabelX + 30, 26)
-            TextBtn.Size = UDim2.fromOffset(LabelX + 30, 26)
-
-            local ActiveColor = typeof(BtnColor) == "Color3" and BtnColor or Library.Scheme[BtnColor]
-            local HoverColor = Variant == "Ghost" and Library.Scheme.MainColor or Library:GetBetterColor(ActiveColor, 10)
-
-            TextBtn.MouseEnter:Connect(function()
-                TweenService:Create(TextBtn, Library.TweenInfo, {
-                    BackgroundColor3 = HoverColor
-                }):Play()
-            end)
-            TextBtn.MouseLeave:Connect(function()
-                TweenService:Create(TextBtn, Library.TweenInfo, {
-                    BackgroundColor3 = ActiveColor
-                }):Play()
-            end)
-
-            TextBtn.MouseButton1Click:Connect(function()
-                if ButtonInfo.Callback then
-                    ButtonInfo.Callback(Loading)
-                end
-            end)
-        end
-
-        Loading:UpdateLayout()
-    end
-
-    --// Destroy/Continue \\--
-    function Loading:Destroy()
-        if RotationTween then
-            RotationTween:Cancel()
-        end
-
-        ScreenGui:Destroy()
-        Loading.Destroyed = true
-        Library.ActiveLoading = nil
-
-        if Library.Toggle and Library.Toggled == false and Library.Unloaded ~= true then
-            Library:Toggle(true)
-        end
-    end
-
-    Loading.Continue = Loading.Destroy;
-
-    if Library.Toggle and Library.Toggled and Library.Unloaded ~= true then
-        Library:Toggle(false)
-    end
-
-    Loading:SetCurrentStep(Loading.CurrentStep)
-
-    Library.ActiveLoading = Loading
-    return Loading
 end
 
 local function OnPlayerChange()
